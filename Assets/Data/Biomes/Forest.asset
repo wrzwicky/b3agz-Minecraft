@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33c26d192ba6fed4291ef309ffa5fd23, type: 3}
+  m_Name: Forest
+  m_EditorClassIdentifier: 
+  biomeName: Forest
+  offset: 87544
+  scale: 0.17
+  terrainHeight: 80
+  terrainScale: 0.3
+  surfaceBlock: 5
+  subSurfaceBlock: 5
+  placeMajorFlora: 1
+  zoneSurfaceBlock: 5
+  majorFloraIndex: 6
+  majorFloraZoneScale: 1.3
+  majorFloraZoneTheshold: 0.384
+  majorFloraPlacementScale: 5
+  majorFloraPlacementThreshold: 0.755
+  minHeight: 5
+  maxHeight: 12
+  lodes:
+  - lodeName: Dirt
+    blockID: 5
+    minHeight: 1
+    maxHeight: 255
+    scale: 0.1
+    threshold: 0.5
+    noiseOffset: 0
+  - lodeName: Sand
+    blockID: 4
+    minHeight: 40
+    maxHeight: 60
+    scale: 0.2
+    threshold: 0.6
+    noiseOffset: 500
