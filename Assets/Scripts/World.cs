@@ -21,8 +21,6 @@ public class World : MonoBehaviour {
 
     public GameObject debugScreen;
 
-    Chunk[,] chunks = new Chunk[VoxelData.WorldSizeInChunks, VoxelData.WorldSizeInChunks];
-
     //List<ChunkCoord> activeChunks = new List<ChunkCoord>();
     ChunkCoord playerLastChunk = null; //ensure first update
 
@@ -40,6 +38,20 @@ public class World : MonoBehaviour {
 
     public Clouds clouds;
 
+    Chunk[,] chunks = new Chunk[VoxelData.WorldSizeInChunks, VoxelData.WorldSizeInChunks];
+
+    // - - - - - New WorldData system - - - - - //
+
+    private static World _instance;
+    public static World Instance { get { return _instance; } }
+
+    public object chunkListThreadLock = new object();
+
+    public string appPath;
+    public WorldData worldData;
+
+    // - - - - - - - - - - - - - - - - - - - - //
+
 
     [Header("Lighting")]
     [Range(0, 1f)]
@@ -53,6 +65,13 @@ public class World : MonoBehaviour {
 
     private void Awake() {
 
+        // capture singleton
+        if(_instance != null && _instance != this)
+            // destroy imposters
+            Destroy(this.gameObject);
+        else
+            _instance = this;
+
         try {
             settings = Settings.LoadFile(Application.dataPath + "/settings.cfg");
         }
@@ -60,13 +79,8 @@ public class World : MonoBehaviour {
             // just use the defaults from Unity editor
         }
 
-        Debug.Log("Generating new world using seed " + VoxelData.seed);
-        Random.InitState(VoxelData.seed);
-
-        if(settings.enableThreading) {
-            chunkUpdateThread = new Thread(new ThreadStart(ThreadedUpdate));
-            chunkUpdateThread.Start();
-        }
+        // copy app path so it's availble off thread
+        appPath = Application.persistentDataPath;
 
         clouds.style = settings.clouds;
 
@@ -83,6 +97,23 @@ public class World : MonoBehaviour {
             VoxelData.ChunkHeight - 2,  //TODO crashes if y>chunkheight
             VoxelData.WorldCentre);
         // player.position = spawnPosition;
+
+        // worldData is magically not null here, dunno what's going on
+        string path = Path.Combine(appPath, "saves", worldData.worldName);
+        worldData = SaveSystem.LoadWorld(path, VoxelData.seed);
+        if(worldData == null) {
+            Debug.Log("Generating new world using seed " + VoxelData.seed);
+            worldData = new WorldData();
+        }
+        else
+            Debug.Log("Loaded world from " + worldData.savePath);
+
+        Random.InitState(worldData.seed);
+
+        if(settings.enableThreading) {
+            chunkUpdateThread = new Thread(new ThreadStart(ThreadedUpdate));
+            chunkUpdateThread.Start();
+        }
 
     }
 
@@ -115,9 +146,13 @@ public class World : MonoBehaviour {
 
         DrawChunks_now();
 
-        if(Input.GetKeyDown(KeyCode.F3)) {
-
+        if(Input.GetKeyDown(KeyCode.F3))
             debugScreen.SetActive(!debugScreen.activeSelf);
+
+        if(Input.GetKeyDown(KeyCode.F5)) {
+
+            string path = appPath + "/saves/" + worldData.worldName + "/";
+            SaveSystem.SaveWorld(worldData, path);
 
         }
     }
@@ -171,6 +206,7 @@ public class World : MonoBehaviour {
         List<ChunkCoord> showChunks = new List<ChunkCoord>();
         List<ChunkCoord> hideChunks = new List<ChunkCoord>();
 
+        // extra +/- 2 is to hide chunks as they go out of range
         for(int x = center.x - settings.viewDistance-2; x < center.x + settings.viewDistance+2; x++) {
             for(int z = center.z - settings.viewDistance-2; z < center.z + settings.viewDistance+2; z++) {
 
@@ -178,7 +214,7 @@ public class World : MonoBehaviour {
 
                 if(IsChunkInWorld(coord)) {
 
-                    Vector2 playerRef = new Vector2(player.position.x, player.position.z);
+                    Vector2 playerRef = new Vector2(center.x * VoxelData.ChunkWidth, center.z * VoxelData.ChunkWidth); //player.position.x, player.position.z);
                     Vector2 chunkRef = new Vector2(x * VoxelData.ChunkWidth, z * VoxelData.ChunkWidth);
                     float dist = (playerRef - chunkRef).magnitude;
 
@@ -370,10 +406,11 @@ public class World : MonoBehaviour {
         if(coord == null)
             return false;
 
-        Chunk newc = chunks[coord.x, coord.z];
+        Debug.Log("Update "+coord);
+        Chunk c = chunks[coord.x, coord.z];
 
         // generate this chunk
-        newc.UpdateChunk();
+        c.UpdateChunk();
 
         return true;
 
@@ -392,7 +429,7 @@ public class World : MonoBehaviour {
             if(c == null)
                 break;
 
-            c.InitUnity();
+            c.InitForUnity();
             c.CreateMesh();
 
         }

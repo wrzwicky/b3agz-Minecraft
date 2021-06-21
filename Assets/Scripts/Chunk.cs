@@ -27,14 +27,19 @@ public class Chunk
     // location in the world of this chunk's origin
     public Vector3 origin;
 
-    // All the actual voxels for this chunk
-    private VoxelState [,,] voxelMap = new VoxelState[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
     World world;
 
     public bool isVoxelMapPopulated = false;  //explicit; not true til voxelMap is fully done
     bool _isActive;
 
     public Jobs<VoxelMod> modifications = new Jobs<VoxelMod>();
+
+    // - - - - - New WorldData system - - - - - //
+
+    ChunkData chunkData;
+
+    // - - - - - - - - - - - - - - - - - - - - //
+
 
     // perform basic chunk init
     public Chunk(ChunkCoord _coord, World _world) {
@@ -44,10 +49,15 @@ public class Chunk
         world = _world;
         _isActive = false;
 
+        // Chunk is a kind of game object, so we can trust that World is available
+        // Also apparently we can call this from another thread, but we need it now.
+        chunkData = World.Instance.worldData.RequestChunk(new Vector2Int((int)origin.x, (int)origin.z), true);
+
     }
 
     // init Unity objects. must be called on game thread.
-    public void InitUnity() {
+    // must be called early; we won't have chunkData until World is available
+    public void InitForUnity() {
 
         if(chunkObject == null) {
 
@@ -85,22 +95,9 @@ public class Chunk
 
         if(!isVoxelMapPopulated) {
 
-            //Debug.Log("PopulateVoxelMap "+coord);
-            for(int y=0; y<VoxelData.ChunkHeight; y++) {
-                for(int x=0; x<VoxelData.ChunkWidth; x++) {
-                    for(int z=0; z<VoxelData.ChunkWidth; z++) {
-
-                        voxelMap[x,y,z] = new VoxelState( world.CreateVoxel(new Vector3(x,y,z) + origin, false));
-
-                    }
-                }
-            }
+            chunkData.Populate();
 
             isVoxelMapPopulated = true;
-
-            if(world.settings.enableAnimatedChunks && !world.settings.enableThreading)
-                // only works if we're on the main thread
-                chunkObject.AddComponent<ChunkLoadAnimation>();
 
         }
     }
@@ -172,7 +169,7 @@ public class Chunk
         if (!IsVoxelInChunk(v))
             return world.Voxel(origin + pos);
 
-        return world.blockTypes[voxelMap[v.x, v.y, v.z].id];
+        return world.blockTypes[chunkData.map[v.x, v.y, v.z].id];
 
     }
 
@@ -185,7 +182,7 @@ public class Chunk
         if (!IsVoxelInChunk(v))
             return world.GetState(origin + pos);
 
-        return voxelMap[v.x, v.y, v.z];
+        return chunkData.map[v.x, v.y, v.z];
 
     }
 
@@ -193,7 +190,7 @@ public class Chunk
     public VoxelState GetVoxelFromGlobalPosition(Vector3 pos) {
         
         Vector3Int v = Vector3Int.FloorToInt(pos - origin);
-        return voxelMap[v.x, v.y, v.z];
+        return chunkData.map[v.x, v.y, v.z];
 
     }
 
@@ -201,7 +198,8 @@ public class Chunk
     public void SetVoxelFromGlobalPosition(Vector3 pos, byte id) {
 
         Vector3Int v = Vector3Int.FloorToInt(pos - origin);
-        voxelMap[v.x, v.y, v.z].id = id;
+        chunkData.map[v.x, v.y, v.z].id = id;
+        World.Instance.worldData.AddModified(chunkData);
 
     }
 
@@ -209,7 +207,8 @@ public class Chunk
     public void EditVoxel(Vector3 pos, byte newID) {
 
         Vector3Int v = Vector3Int.FloorToInt(pos - origin);
-        voxelMap[v.x, v.y, v.z].id = newID;
+        chunkData.map[v.x, v.y, v.z].id = newID;
+        World.Instance.worldData.AddModified(chunkData);
 
         //UpdateChunkBackground();
         //UpdateChunk_thread();
@@ -273,7 +272,7 @@ public class Chunk
     void UpdateMeshData(Vector3 pos) {
 
         Vector3Int ipos = Vector3Int.FloorToInt(pos);
-        VoxelState myState = voxelMap[ipos.x, ipos.y, ipos.z];
+        VoxelState myState = chunkData.map[ipos.x, ipos.y, ipos.z];
         BlockType myType = world.blockTypes[myState.id];
 
         if(!myType.isSolid)
@@ -351,49 +350,53 @@ public class Chunk
     // create Unity mesh objects from stored verts/tris
     public void CreateMesh() {
 
-        if(!freshMesh)
-            return;
+        if(freshMesh) {
 
-        Vector3[] vertsA = null;
-        int[] trisA = null;
-        int[] transA = null;
-        Vector2[] uvsA = null;
-        Color[] colorsA = null;
-        Vector3[] normalsA = null;
+            Vector3[] vertsA = null;
+            int[] trisA = null;
+            int[] transA = null;
+            Vector2[] uvsA = null;
+            Color[] colorsA = null;
+            Vector3[] normalsA = null;
 
-        lock (vertices) {
+            lock (vertices) {
 
-            vertsA = vertices.ToArray();
-            trisA = triangles.ToArray();
-            transA = transparentTriangles.ToArray();
-            uvsA = uvs.ToArray();
-            colorsA = colors.ToArray();
-            normalsA = normals.ToArray();
+                vertsA = vertices.ToArray();
+                trisA = triangles.ToArray();
+                transA = transparentTriangles.ToArray();
+                uvsA = uvs.ToArray();
+                colorsA = colors.ToArray();
+                normalsA = normals.ToArray();
 
-            freshMesh = false;
+                freshMesh = false;
+
+            }
+
+            Mesh mesh = new Mesh();
+            mesh.vertices = vertsA;
+            
+            mesh.subMeshCount = 2;
+            mesh.SetTriangles(trisA, 0);  //opaque material
+            mesh.SetTriangles(transA, 1);  //transparent material
+
+            mesh.uv = uvsA;
+
+            mesh.colors = colorsA;
+
+            //mesh.RecalculateNormals();
+            mesh.normals = normalsA;
+
+            meshFilter.mesh = mesh;
 
         }
 
-        Mesh mesh = new Mesh();
-        mesh.vertices = vertsA;
-        
-        mesh.subMeshCount = 2;
-        mesh.SetTriangles(trisA, 0);  //opaque material
-        mesh.SetTriangles(transA, 1);  //transparent material
+        if(chunkObject.activeSelf != isActive) {
 
-        mesh.uv = uvsA;
-
-        mesh.colors = colorsA;
-
-        mesh.normals = normalsA;
-        //mesh.RecalculateNormals();
-
-        meshFilter.mesh = mesh;
-
-        if(!chunkObject.activeSelf && isActive) {
-
-            //chunkObject.AddComponent<ChunkLoadAnimation>(); --doesn't work
             chunkObject.SetActive(isActive);
+
+            if(isActive && world.settings.enableAnimatedChunks)
+                // only works if we're on the main thread
+                chunkObject.AddComponent<ChunkLoadAnimation>();
 
         }
     }
@@ -408,7 +411,7 @@ public class Chunk
 
                 for(int y=VoxelData.ChunkHeight-1; y >= 0; y--) {
 
-                    VoxelState vox = voxelMap[x, y, z];
+                    VoxelState vox = chunkData.map[x, y, z];
                     var blk = world.blockTypes[vox.id];
 
                     if(blk.isSolid) {
@@ -432,7 +435,7 @@ public class Chunk
 
                 for(int y=VoxelData.ChunkHeight - 1; y >= 0; y--) {
 
-                    VoxelState thisVoxel = voxelMap[x,y,z];
+                    VoxelState thisVoxel = chunkData.map[x,y,z];
 
                     if(thisVoxel.id > 0 && world.blockTypes[thisVoxel.id].transparency < lightRay)
                         lightRay = world.blockTypes[thisVoxel.id].transparency;
@@ -458,15 +461,15 @@ public class Chunk
 
                 if(IsVoxelInChunk(neighbor)) {
 
-                    if(voxelMap[neighbor.x, neighbor.y, neighbor.z].lightLevel
-                        < voxelMap[v.x, v.y, v.z].lightLevel - VoxelData.lightFalloff) {
+                    if(chunkData.map[neighbor.x, neighbor.y, neighbor.z].lightLevel
+                        < chunkData.map[v.x, v.y, v.z].lightLevel - VoxelData.lightFalloff) {
 
                         // vox is lit by neighbors
-                        voxelMap[neighbor.x, neighbor.y, neighbor.z].lightLevel 
-                            = voxelMap[v.x, v.y, v.z].lightLevel - VoxelData.lightFalloff;
+                        chunkData.map[neighbor.x, neighbor.y, neighbor.z].lightLevel 
+                            = chunkData.map[v.x, v.y, v.z].lightLevel - VoxelData.lightFalloff;
 
                         // vox is bright enough to illuminate neighbors
-                        if(voxelMap[neighbor.x, neighbor.y, neighbor.z].lightLevel > VoxelData.lightFalloff)
+                        if(chunkData.map[neighbor.x, neighbor.y, neighbor.z].lightLevel > VoxelData.lightFalloff)
                             litVoxels.Enqueue(neighbor);
 
                     }
@@ -506,6 +509,8 @@ public class ChunkCoord {
 
     }
 
+    public Vector2Int V2 { get { return new Vector2Int(x,z); } }
+
     // override object.Equals
     public override bool Equals(object obj)
     {
@@ -536,6 +541,8 @@ public class ChunkCoord {
     }
 }
 
+[HideInInspector]
+[System.Serializable]
 public class VoxelState {
     
     /// <summary>block type id</summary>
@@ -557,30 +564,3 @@ public class VoxelState {
 
     }
 }
-
-
-
-/*
-// old threading code
-
-    /// <summary>generate/update/render as needed, on another thread</summary>
-    public void UpdateChunkBackground() {
-
-        Thread t = new Thread(new ThreadStart(UpdateChunk_thread));
-        t.Start();
-
-    }
-
-    // thread worker
-    void UpdateChunk_thread() {
-
-        PopulateVoxelMap();  //only runs if new chunk
-        //TODO re-queue self and neighbors if PopVM did something
-        _updateChunk();
-        world.chunksToDraw.Add(this);
-
-    }
-
-
-
-*/

@@ -7,6 +7,7 @@ public static class Structure {
     // 6 'trunk' -> tree
     // 12 'cactus' -> cactus
     public static void GenerateMajorFlora(int index, Vector3 position, Jobs<VoxelMod> queue, int minHeight, int maxHeight, float headSize) {
+        //Debug.Log("Flora "+index+" at "+position);
         switch(index) {
 
             case 6:
