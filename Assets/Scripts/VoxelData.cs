@@ -10,9 +10,9 @@ public static class VoxelData
     public static readonly int WorldSizeInChunks = 100;
 
     // Lighting values
-    public static float minLightLevel = 0.15f;
+    public static float minLightLevel = 0.05f;
     public static float maxLightLevel = 0.8f;
-    public static float lightFalloff = 0.08f;
+//    public static float lightFalloff = 0.08f; now just 1 unitOfLight
     
     // world seed
     public static int seed = Mathf.Abs(Utils.SuperRandom()) / VoxelData.WorldSizeInChunks;
@@ -72,4 +72,10 @@ public static class VoxelData
         new Vector2(1,0),
         new Vector2(1,1),
     };
+
+    // Light is handle as float (0-1) but Minecraft stores it as a byte (0-15),
+    // thus conversion.
+    public static float unitOfLight {
+        get { return 1f / 16f; }
+    }
 }

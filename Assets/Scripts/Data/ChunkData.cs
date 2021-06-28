@@ -1,16 +1,21 @@
 using UnityEngine;
 
 
+/// <summary>
+/// Just the data for a chunk; no Unity code.
+/// 'this is the class that gets saveed'
+/// </summary>
 [System.Serializable]
 public class ChunkData {
 
-    // Vector2Int not serializable :(
+    // Vector2Int is not serializable :(
     int x;
     int y;
 
     // hidden; is too much data for inspector
     [HideInInspector]
     public VoxelState[,,] map = new VoxelState[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
+
 
     public ChunkData(Vector2Int pos) {
 
@@ -42,6 +47,8 @@ public class ChunkData {
                 }
             }
         }
+
+        Lighting.RecalculateNaturalLight(this);
 
         World.Instance.worldData.AddModified(this);
 

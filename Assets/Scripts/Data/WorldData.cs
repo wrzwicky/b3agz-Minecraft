@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using UnityEngine;
 
-// 'this is the class that gets saveed'
+/// <summary>
+/// Just the data for the world; no Unity code.
+/// 'this is the class that gets saveed'
+/// </summary>
 [System.Serializable]
 public class WorldData {
 
@@ -93,7 +96,7 @@ public class WorldData {
         }
 
         chunks.Add(coord, chunkData);
-        
+
     }
 
     // return true if pos is within range defined in VoxelData to have voxels

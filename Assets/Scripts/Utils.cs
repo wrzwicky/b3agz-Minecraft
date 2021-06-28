@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Threading;
 
 
 public static class Utils {
@@ -88,21 +89,48 @@ public class Jobs<T> : IEnumerable<T> {
     ///
     public T Any() {
 
-        lock(things) {
+        //lock(things) {
+        if(Monitor.TryEnter(things)) { try {
 
             HashSet<T>.Enumerator e = things.GetEnumerator();
             if(e.MoveNext()) {
 
                 T job = e.Current;
-                things.Remove(job);
                 e.Dispose();
+                things.Remove(job);
                 return job;
 
             }
             else
                 return default(T);
 
+        //}
+        } finally { Monitor.Exit(things); } } else { return default(T); }
+
+    }
+
+    // use a lambda, like for Sort:
+    // list.Sort( (obj1,obj2) => obj1.FirstName.CompareTo(obj2.FirstName) );
+    // returns default(T) if list is empty
+    public T First(Comparer<T> comparer) {
+
+        T first = default(T);
+
+        lock(things) {
+
+            //iterate things, keep lowest
+            bool haveFirst = false;
+            foreach(T t in things) {
+
+                if(!haveFirst)
+                    first = t;
+                else if(comparer.Compare(first,t) < 0)
+                    first = t;
+
+            }
         }
+
+        return first;
     }
 
     public IEnumerator<T> GetEnumerator()

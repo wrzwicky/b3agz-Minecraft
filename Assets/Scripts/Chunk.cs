@@ -52,6 +52,7 @@ public class Chunk
         // Chunk is a kind of game object, so we can trust that World is available
         // Also apparently we can call this from another thread, but we need it now.
         chunkData = World.Instance.worldData.RequestChunk(new Vector2Int((int)origin.x, (int)origin.z), true);
+        isVoxelMapPopulated = true;
 
     }
 
@@ -128,7 +129,7 @@ public class Chunk
     /// </summary>
     public void UpdateChunk() {
 
-        PopulateVoxelMap();
+//        PopulateVoxelMap(); -- done by RequestChunk
 
         bool modded = ApplyModifications() > 0;
 
@@ -136,6 +137,8 @@ public class Chunk
         bool newMesh = true; // (modded || vertices.Count == 0);
 
         if(newMesh) {
+
+            RecalculateLight();
 
             ResetPolys();
             //meshFilter.mesh = CreateMesh();
@@ -150,6 +153,19 @@ public class Chunk
         if(v.x<0 || v.x>VoxelData.ChunkWidth-1
             || v.y<0 || v.y>VoxelData.ChunkHeight-1
             || v.z<0 || v.z>VoxelData.ChunkWidth-1)
+            // no voxels outside this chunk
+            return false;
+        else
+            return true;
+
+    }
+
+    // return false if x,y,z is outside chuck local coords (0..ChunkWidth/Height)
+    bool IsVoxelInChunk(int x, int y, int z) {
+
+        if(x<0 || x>VoxelData.ChunkWidth-1
+            || y<0 || y>VoxelData.ChunkHeight-1
+            || z<0 || z>VoxelData.ChunkWidth-1)
             // no voxels outside this chunk
             return false;
         else
@@ -249,8 +265,8 @@ public class Chunk
         lock(vertices) {
 
             ClearMeshData();
-            CalculateLight_wrz();
-            //CalculateLight_b3agz();
+//            CalculateLight_wrz();
+//            //CalculateLight_b3agz();
 
             for(int y=0; y<VoxelData.ChunkHeight; y++) {
                 for(int x=0; x<VoxelData.ChunkWidth; x++) {
@@ -273,12 +289,11 @@ public class Chunk
 
         Vector3Int ipos = Vector3Int.FloorToInt(pos);
         VoxelState myState = chunkData.map[ipos.x, ipos.y, ipos.z];
-        BlockType myType = world.blockTypes[myState.id];
 
-        if(!myType.isSolid)
+        if(!myState.blockType.isSolid)
             return;
 
-        float lightLevel = myState.lightLevel;
+        float lightLevel = myState.lightAsFloat;
 
         // Copy vertices in voxelTris order
         for (int p=0; p<6; p++) {
@@ -297,14 +312,14 @@ public class Chunk
                 for(int i=0; i<4; i++)
                     normals.Add(VoxelData.faceChecks[p]);
 
-                AddTexture(myType.GetTextureID(p));
+                AddTexture(myState.blockType.GetTextureID(p));
 
                 colors.Add(new Color(0,0,0,lightLevel));
                 colors.Add(new Color(0,0,0,lightLevel));
                 colors.Add(new Color(0,0,0,lightLevel));
                 colors.Add(new Color(0,0,0,lightLevel));
 
-                if(!myType.seeThrough) {
+                if(!neighbor.blockType.seeThrough) {
 
                     triangles.Add(vertexIndex);
                     triangles.Add(vertexIndex+1);
@@ -401,88 +416,96 @@ public class Chunk
         }
     }
 
-    // my simple version
-    void CalculateLight_wrz() {
+
+
+
+    public void PurgeLight() {
 
         for(int x=0; x<VoxelData.ChunkWidth; x++) {
-            for(int z=0; z<VoxelData.ChunkWidth; z++) {
+            for(int y=0; y<VoxelData.ChunkHeight; y++) {
+                for(int z=0; z<VoxelData.ChunkWidth; z++) {
 
-                float light = 1;
+                    chunkData.map[x,y,z].light = 0;
 
-                for(int y=VoxelData.ChunkHeight-1; y >= 0; y--) {
-
-                    VoxelState vox = chunkData.map[x, y, z];
-                    var blk = world.blockTypes[vox.id];
-
-                    if(blk.isSolid) {
-                        vox.lightLevel = light;
-                        light *= world.blockTypes[vox.id].transparency;
-                    }
                 }
             }
         }
     }
 
-    // b3agz' version
-    void CalculateLight_b3agz() {
+    public void RecalculateLight() {
 
-        Queue<Vector3Int> litVoxels = new Queue<Vector3Int>();
+        PurgeLight();
+        Lighting.RecalculateNaturalLight(chunkData);
+        //TODO ReplaceLights() -- add light sources
 
-        for(int x=0; x<VoxelData.ChunkWidth; x++) {
-            for(int z=0; z<VoxelData.ChunkWidth; z++) {
+        bool changed = false;
+        int safety = 18;
 
-                float lightRay = 1f;
+        do {
 
-                for(int y=VoxelData.ChunkHeight - 1; y >= 0; y--) {
+            changed = false;
+            
+            for(int x=0; x<VoxelData.ChunkWidth; x++) {
+                for(int y=0; y<VoxelData.ChunkHeight; y++) {
+                    for(int z=0; z<VoxelData.ChunkWidth; z++) {
 
-                    VoxelState thisVoxel = chunkData.map[x,y,z];
+                        VoxelState voxel = chunkData.map[x, y, z];
 
-                    if(thisVoxel.id > 0 && world.blockTypes[thisVoxel.id].transparency < lightRay)
-                        lightRay = world.blockTypes[thisVoxel.id].transparency;
+                        // if hasn't been lit
+                        if (voxel.light == 0) {
 
-                    thisVoxel.lightLevel = lightRay;
+                            // get current light
+                            int light = voxel.light;
 
-                    // vox is bright enough to illuminate neighbors
-                    if(lightRay > VoxelData.lightFalloff)
-                        litVoxels.Enqueue(new Vector3Int(x,y,z));
+                            // find brightest neighbor
+                            for(int p = 0; p < VoxelData.faceChecks.Length; p++) {
 
-                }
-            }
-        }
+                                Vector3Int index = new Vector3Int(x,y,z) + VoxelData.faceChecks[p];
+                                VoxelState probe;
 
-        while(litVoxels.Count > 0) {
+                                if(!IsVoxelInChunk(index))
+                                    probe = World.Instance.GetState(origin + index);
+                                else
+                                    probe = chunkData.map[index.x, index.y, index.z];
 
-            var v = litVoxels.Dequeue();
+                                if(probe.blockType.isSolid)
+                                    // dim with distance
+                                    light = Math.Max(light, probe.light-1);
+                                else
+                                    light = Math.Max(light, probe.light);
 
-            for(int p=0; p<6; p++) {
+                            }
 
-                Vector3 currentVoxel = v + VoxelData.faceChecks[p];
-                Vector3Int neighbor = Vector3Int.FloorToInt(currentVoxel);
+                            // if light changed
+                            if(light != voxel.light) {
 
-                if(IsVoxelInChunk(neighbor)) {
+                                // // dim with distance
+                                // if(light > 0)
+                                //     light -= 1;
 
-                    if(chunkData.map[neighbor.x, neighbor.y, neighbor.z].lightLevel
-                        < chunkData.map[v.x, v.y, v.z].lightLevel - VoxelData.lightFalloff) {
+                                voxel.light = (byte)light;
+                                changed = true;
 
-                        // vox is lit by neighbors
-                        chunkData.map[neighbor.x, neighbor.y, neighbor.z].lightLevel 
-                            = chunkData.map[v.x, v.y, v.z].lightLevel - VoxelData.lightFalloff;
-
-                        // vox is bright enough to illuminate neighbors
-                        if(chunkData.map[neighbor.x, neighbor.y, neighbor.z].lightLevel > VoxelData.lightFalloff)
-                            litVoxels.Enqueue(neighbor);
-
+                            }
+                        }
                     }
                 }
             }
-        }
+
+            safety--;
+
+        } while(changed && safety > 0);
     }
+
+
 
     public override string ToString()
     {
         return base.ToString()+"("+coord+")";
     }
 }
+
+
 
 // index of chunk in chunk map
 public class ChunkCoord {
@@ -537,30 +560,6 @@ public class ChunkCoord {
     public override string ToString() {
 
         return "(" + x + ", " + z + ")";
-
-    }
-}
-
-[HideInInspector]
-[System.Serializable]
-public class VoxelState {
-    
-    /// <summary>block type id</summary>
-    public byte id;
-    /// <summary>How much light is falling on this block</summary>
-    public float lightLevel;
-
-    public VoxelState() {
-
-        id = 0;
-        lightLevel = 0;
-
-    }
-
-    public VoxelState(byte id) {
-
-        this.id = id;
-        this.lightLevel = 1f;
 
     }
 }

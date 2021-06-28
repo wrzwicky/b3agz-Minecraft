@@ -21,10 +21,8 @@ public class World : MonoBehaviour {
 
     public GameObject debugScreen;
 
-    //List<ChunkCoord> activeChunks = new List<ChunkCoord>();
     ChunkCoord playerLastChunk = null; //ensure first update
 
-    //HashSet<ChunkCoord> chunksToCreate = new HashSet<ChunkCoord>();
     public Jobs<ChunkCoord> chunksToUpdate = new Jobs<ChunkCoord>();
     bool isUpdatingChunks;
     public Jobs<Chunk> chunksToDraw = new Jobs<Chunk>();
@@ -46,7 +44,7 @@ public class World : MonoBehaviour {
     public static World Instance { get { return _instance; } }
 
     public object chunkListThreadLock = new object();
-
+    
     public string appPath;
     public WorldData worldData;
 
@@ -60,7 +58,6 @@ public class World : MonoBehaviour {
     public Color night;
 
     Thread chunkUpdateThread;
-    public object chunkUpdateThreadLock = new object();
 
 
     private void Awake() {
@@ -398,13 +395,15 @@ public class World : MonoBehaviour {
     }
 
     bool UpdateChunks_one() {
-
+Debug.Log("UpdateChunks_one - start");
         // apply any outstanding mods
         ApplyModifications();
 
         ChunkCoord coord = chunksToUpdate.Any();
-        if(coord == null)
+        if(coord == null) {
+Debug.Log("UpdateChunks_one -      empty");
             return false;
+        }
 
         Debug.Log("Update "+coord);
         Chunk c = chunks[coord.x, coord.z];
@@ -412,6 +411,7 @@ public class World : MonoBehaviour {
         // generate this chunk
         c.UpdateChunk();
 
+Debug.Log("UpdateChunks_one -      end");
         return true;
 
     }
@@ -591,15 +591,15 @@ public class World : MonoBehaviour {
 
     public VoxelState GetState(Vector3 pos) {
 
-        ChunkCoord thisChunk = new ChunkCoord(pos);
-
         // air outside world
         if(!IsVoxelInWorld(pos))
             return new VoxelState(0);
 
+        ChunkCoord coord = new ChunkCoord(pos);
+
         // return voxel if generated
-        if(chunks[thisChunk.x, thisChunk.z] != null && chunks[thisChunk.x,thisChunk.z].isVoxelMapPopulated)
-            return chunks[thisChunk.x, thisChunk.z].GetVoxelFromGlobalPosition(pos);
+        if(chunks[coord.x, coord.z] != null && chunks[coord.x,coord.z].isVoxelMapPopulated)
+            return chunks[coord.x, coord.z].GetVoxelFromGlobalPosition(pos);
 
         // generate (but dont save) if not
         return new VoxelState(1);
@@ -620,15 +620,20 @@ public class BlockType {
         NOTHING.seeThrough = true;
     }
 
-    /// <summary>descriptive name for contents of block</summary>
+    [Tooltip("descriptive name for contents of block")]
     public string blockName;
-    /// <summary>true if there is anything at all in this block; false if fully empty</summary>
-    public bool isSolid;
-    /// <summary>true if block is transparent, translucent, or otherwise does not fully block view of neighbor blocks</summary>
-    public bool seeThrough;
-    public float transparency;
     public Sprite icon;
-    
+    public VoxelMeshData meshData;
+
+    [Header ("Visibility")]
+    [Tooltip("true if there is anything at all in this block; false if fully empty (air/space)")]
+    public bool isSolid;
+    [Tooltip("true if block is transparent, translucent, or otherwise does not fully block view of neighbor blocks")]
+    public bool seeThrough;
+    [Tooltip("amount of light stopped by block: 0 = none (invisible); 15 = all (opaque)")]
+    [Range(0, 15)]
+    public byte opacity;
+
     [Header ("Texture Values")]
     public int backFaceTexture;
     public int frontFaceTexture;
@@ -752,78 +757,6 @@ public class ReplaceVoxelMod : VoxelMod {
 
     }
 }
-
-
-
-/*
-// Old threading code
-
-in Update():
-            // StartCoroutine(UpdateChunks_coro());
-            // isCreatingChunks = true;
-
-    /// <summary>coroutine to update chunksToUpdate, one at a time</summary>
-    // be sure to set
-    //   isCreatingChunks = true
-    // after starting one of these; it might be a while before we can run and set it ourselves!
-    // b3agz calls it CreateChunks
-    IEnumerator UpdateChunks_coro() {
-
-        if(isCreatingChunks)
-            yield break;
-        isCreatingChunks = true;
-
-        // apply any outstanding mods
-yield return null;  //--needed with the threading mods, don't know why
-        ApplyModifications();
-
-        while(true) {
-
-            ChunkCoord coord = chunksToUpdate.Any();
-            if(coord == null)
-                break;
-
-            Chunk newc = chunks[coord.x, coord.z];
-
-            //Chunk newc = chunks[chunksToCreate[0].x, chunksToCreate[0].z];
-            // chunksToCreate.RemoveAt(0);
-
-            // generate this chunk
-            newc.UpdateChunk();
-
-            // spread new mods
-            //HashSet<Chunk> ch = ApplyModifications(); -- not work with threaded Update
-            // re-queue this chunk if changed
-            // if(ch.Contains(newc))
-            //     chunksToUpdate.Add(newc.coord);
-
-            // string s = "HashSet[";
-            // foreach(Chunk c in ch) {
-            //     s += c.ToString()+", ";
-            // }
-            // s += "]";
-            // Debug.Log("New mods for: "+s);
-
-            //TODO still not right; we want to queue all changed chunks that are in view distance
-
-            yield return null;   //--not needed with threading mods
-
-        }
-
-        //This actually works fine, and just updates the view area.
-        //It *should* pull in the whole world due to tree on the edges, but doesn't.
-        //I don't know why. Maybe just lucky that not many trees are on edges?
-        // HashSet<Chunk> ch = SpreadMods();
-        // foreach(Chunk c in ch)
-        //     chunksToCreate.Add(c.coord);
-
-        isCreatingChunks = false;
-
-    }
-
-
-
-*/
 
 
 
