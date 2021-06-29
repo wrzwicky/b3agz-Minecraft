@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c3c838725a9354f87bad356c7e49e2, type: 3}
-  m_Name: Cube
+  m_Name: Half Block
   m_EditorClassIdentifier: 
-  blockName: Cube
+  blockName: Half Block
   faces:
   - direction: Back
     normal: {x: 0, y: 0, z: -1}
     vertices:
     - position: {x: 0, y: 0, z: 0}
       uv: {x: 0, y: 0}
-    - position: {x: 0, y: 1, z: 0}
-      uv: {x: 0, y: 1}
-    - position: {x: 1, y: 1, z: 0}
-      uv: {x: 1, y: 1}
+    - position: {x: 0, y: 0.5, z: 0}
+      uv: {x: 0, y: 0.5}
+    - position: {x: 1, y: 0.5, z: 0}
+      uv: {x: 1, y: 0.5}
     - position: {x: 1, y: 0, z: 0}
       uv: {x: 1, y: 0}
     triangles: 000000000100000003000000030000000100000002000000
@@ -31,23 +31,23 @@ MonoBehaviour:
     vertices:
     - position: {x: 0, y: 0, z: 1}
       uv: {x: 0, y: 0}
-    - position: {x: 0, y: 1, z: 1}
-      uv: {x: 0, y: 1}
-    - position: {x: 1, y: 1, z: 1}
-      uv: {x: 1, y: 1}
+    - position: {x: 0, y: 0.5, z: 1}
+      uv: {x: 0, y: 0.5}
+    - position: {x: 1, y: 0.5, z: 1}
+      uv: {x: 1, y: 0.5}
     - position: {x: 1, y: 0, z: 1}
       uv: {x: 1, y: 0}
     triangles: 000000000300000001000000010000000300000002000000
   - direction: Top
     normal: {x: 0, y: 1, z: 0}
     vertices:
-    - position: {x: 0, y: 1, z: 0}
+    - position: {x: 0, y: 0.5, z: 0}
       uv: {x: 0, y: 0}
-    - position: {x: 0, y: 1, z: 1}
+    - position: {x: 0, y: 0.5, z: 1}
       uv: {x: 0, y: 1}
-    - position: {x: 1, y: 1, z: 1}
+    - position: {x: 1, y: 0.5, z: 1}
       uv: {x: 1, y: 1}
-    - position: {x: 1, y: 1, z: 0}
+    - position: {x: 1, y: 0.5, z: 0}
       uv: {x: 1, y: 0}
     triangles: 000000000100000003000000030000000100000002000000
   - direction: Bottom
@@ -67,10 +67,10 @@ MonoBehaviour:
     vertices:
     - position: {x: 0, y: 0, z: 0}
       uv: {x: 0, y: 0}
-    - position: {x: 0, y: 1, z: 0}
-      uv: {x: 0, y: 1}
-    - position: {x: 0, y: 1, z: 1}
-      uv: {x: 1, y: 1}
+    - position: {x: 0, y: 0.5, z: 0}
+      uv: {x: 0, y: 0.5}
+    - position: {x: 0, y: 0.5, z: 1}
+      uv: {x: 1, y: 0.5}
     - position: {x: 0, y: 0, z: 1}
       uv: {x: 1, y: 0}
     triangles: 000000000300000001000000010000000300000002000000
@@ -79,10 +79,10 @@ MonoBehaviour:
     vertices:
     - position: {x: 1, y: 0, z: 0}
       uv: {x: 0, y: 0}
-    - position: {x: 1, y: 1, z: 0}
-      uv: {x: 0, y: 1}
-    - position: {x: 1, y: 1, z: 1}
-      uv: {x: 1, y: 1}
+    - position: {x: 1, y: 0.5, z: 0}
+      uv: {x: 0, y: 0.5}
+    - position: {x: 1, y: 0.5, z: 1}
+      uv: {x: 1, y: 0.5}
     - position: {x: 1, y: 0, z: 1}
       uv: {x: 1, y: 0}
     triangles: 000000000100000003000000030000000100000002000000
