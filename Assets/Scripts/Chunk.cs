@@ -8,6 +8,45 @@ using UnityEngine;
 
 public class Chunk
 {
+
+    // convert .orientation to y-rotation angle
+    static readonly float[] ROT_ANGLE = {180f, 0f, 0f, 0f, 90f, 270f};
+    
+    // rotate faceChecks index by .orientation
+    // new-p = PROT[orientation, old-p]
+    int[,] ROT_FACECHECKS = {
+        //N,S, T,B, W,E
+        {1,0, 2,3, 5,4},   // orientation == 0-back
+        {0,1, 2,3, 4,5},   // orientation == 1-front
+        {0,1, 2,3, 4,5},   // orientation == 2-top (unused)
+        {0,1, 2,3, 4,5},   // orientation == 3-bottom (unused)
+        {4,5, 2,3, 1,0},   // orientation == 4-west
+        {5,4, 2,3, 0,1},   // orientation == 5-east
+    };
+/*
+            case 0:
+                dirText = "North";
+                break;
+            case 1:
+                dirText = "South";
+                break;
+            case 4:
+                dirText = "West";
+                break;
+            case 5:
+                dirText = "East";
+                break;
+            default:
+                dirText = world.playerScript.orientation.ToString();
+                break;
+
+        new Vector3Int(0,0,-1), //back
+        new Vector3Int(0,0, 1), //front
+        new Vector3Int(0, 1,0), //top
+        new Vector3Int(0,-1,0), //bottom
+        new Vector3Int(-1,0,0), //left
+        new Vector3Int( 1,0,0), //right
+*/
     public ChunkCoord coord;
 
     GameObject chunkObject;
@@ -218,6 +257,16 @@ public class Chunk
 
     }
 
+    // pos is worldwide, but must be within this chunk
+    public void SetVoxelFromGlobalPosition(Vector3 pos, byte id, byte orientation) {
+
+        Vector3Int v = Vector3Int.FloorToInt(pos - origin);
+        chunkData.map[v.x, v.y, v.z].id = id;
+        chunkData.map[v.x, v.y, v.z].orientation = orientation;
+        World.Instance.worldData.AddModified(chunkData);
+
+    }
+
     // pos is worldwide
     public void EditVoxel(Vector3 pos, byte newID) {
 
@@ -286,37 +335,43 @@ public class Chunk
     void UpdateMeshData(Vector3 pos) {
 
         Vector3Int ipos = Vector3Int.FloorToInt(pos);
-        VoxelState myState = chunkData.map[ipos.x, ipos.y, ipos.z];
+        VoxelState voxel = chunkData.map[ipos.x, ipos.y, ipos.z];
 
-        if(!myState.blockType.isSolid)
+        if(!voxel.blockType.isSolid)
             return;
 
         // Copy vertices in voxelTris order
         for (int p=0; p<6; p++) {
 
-            VoxelState neighbor = GetState(pos + VoxelData.faceChecks[p]);
+            int rotp = ROT_FACECHECKS[voxel.orientation, p];
+
+            VoxelState neighbor = GetState(pos + VoxelData.faceChecks[rotp]);
 
             // suppress faces covered by other voxels
             if(neighbor.blockType.seeThrough) {
 
-                FaceMeshData face = myState.blockType.meshData.faces[p];
+                FaceMeshData face = voxel.blockType.meshData.faces[p];
+
+                float rot = ROT_ANGLE[voxel.orientation];
 
                 //float lightLevel = myState.lightAsFloat;
                 float lightLevel = neighbor.lightAsFloat;
                 int firstVert = vertices.Count;
 
-                for(int i=0; i < face.vertices.Length; i++) {
+                for(int i=0; i < face.VertCount; i++) {
 
-                    vertices.Add(pos + face.vertices[i].position);
-                    normals.Add(face.normal);
+                    VertData vertData = face.GetVertData(i);
+
+                    vertices.Add(pos + vertData.GetRotatedPos(new Vector3(0, rot, 0)));
+                    normals.Add(VoxelData.faceChecks[p]);
                     colors.Add(new Color(0,0,0, lightLevel));
-                    AddTextureVert(myState.blockType.GetTextureID(p), face.vertices[i].uv);
+                    AddTextureVert(voxel.blockType.GetTextureID(p), vertData.uv);
 
                 }
 
                 for(int i=0; i < face.triangles.Length; i++) {
 
-                    (!myState.blockType.seeThrough ? triangles : transparentTriangles).Add(
+                    (!voxel.blockType.seeThrough ? triangles : transparentTriangles).Add(
                         firstVert + face.triangles[i]
                     );
 

@@ -109,7 +109,7 @@ public class WorldData {
     }
 
     // pos = pos in world
-    public void SetVoxel(Vector3 pos, byte value) {
+    public void SetVoxel(Vector3 pos, byte value, byte orientation) {
 
         if(!IsVoxelInWorld(pos))
             return;
@@ -131,6 +131,7 @@ public class WorldData {
 
         // finally update voxel
         chunk.map[voxel.x, voxel.y, voxel.z].id = value;
+        chunk.map[voxel.x, voxel.y, voxel.z].orientation = orientation;
 
         modifiedChunks.Add(chunk);
 

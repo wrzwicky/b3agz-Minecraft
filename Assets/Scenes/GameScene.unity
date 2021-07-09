@@ -152,7 +152,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5252040171469558609, guid: 29e46bbf79f3f2c4cadcf7271c24c980, type: 3}
       propertyPath: m_RootOrder
-      value: 4
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 5252040171469558609, guid: 29e46bbf79f3f2c4cadcf7271c24c980, type: 3}
       propertyPath: m_AnchorMax.x
@@ -320,7 +320,7 @@ MonoBehaviour:
     m_MaxSize: 40
     m_Alignment: 0
     m_AlignByGeometry: 0
-    m_RichText: 1
+    m_RichText: 0
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
@@ -2227,6 +2227,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ab3874b3b45dfcf4488f218c4220ecd0, type: 2}
   - {fileID: 11400000, guid: 5e184ba1b71d8054693a69d5cf344db3, type: 2}
   player: {fileID: 2003357840}
+  playerScript: {fileID: 0}
   spawnPosition: {x: 0, y: 0, z: 0}
   material: {fileID: 2100000, guid: 0cb19855740cc7c46b30dc9c54b5c178, type: 2}
   transparentMaterial: {fileID: 2100000, guid: 0523b1d240fe3ea45aa02faea05f7f12, type: 2}
@@ -2341,7 +2342,7 @@ MonoBehaviour:
     rightFaceTexture: 11
   - blockName: Cobblestone
     icon: {fileID: 5679390536090785944, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
-    meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    meshData: {fileID: 11400000, guid: ec3c03649abb52d40b5b0542e9738825, type: 2}
     isSolid: 1
     seeThrough: 0
     opacity: 15
@@ -2399,6 +2400,18 @@ MonoBehaviour:
     bottomFaceTexture: 17
     leftFaceTexture: 18
     rightFaceTexture: 18
+  - blockName: Furnace
+    icon: {fileID: 5679390536090785944, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
+    meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isSolid: 1
+    seeThrough: 0
+    opacity: 15
+    backFaceTexture: 13
+    frontFaceTexture: 12
+    topFaceTexture: 15
+    bottomFaceTexture: 15
+    leftFaceTexture: 13
+    rightFaceTexture: 13
   debugScreen: {fileID: 153910518}
   creativeInventoryWindow: {fileID: 1085744341}
   cursorSlot: {fileID: 1942917803}
@@ -2477,6 +2490,7 @@ MonoBehaviour:
   boundsTolerance: 0.1
   isGrounded: 0
   isSprinting: 0
+  orientation: 0
   blockHighlight: {fileID: 356091261}
   blockPlacer: {fileID: 2138488913}
   checkIncrement: 0.1

@@ -15,9 +15,16 @@ public class VoxelMeshData : ScriptableObject {
 public class FaceMeshData {
 
     public string direction;  //name; for inspector
-    public Vector3 normal;    //one normal for all 4 verts
-    public VertData[] vertices;
+    private VertData[] vertices;
     public int[] triangles;
+
+    public int VertCount {
+        get { return vertices.Length; }
+    }
+
+    public VertData GetVertData(int index) {
+        return vertices[index];
+    }
 
 }
 
@@ -32,6 +39,15 @@ public class VertData {
 
         this.position = pos;
         this.uv = uv;
+        
+    }
+
+    public Vector3 GetRotatedPos(Vector3 angles) {
+
+        Vector3 centre = new Vector3(0.5f, 0.5f, 0.5f);  //center of rotation
+        Vector3 direction = position - centre;
+        direction = Quaternion.Euler(angles) * direction;
+        return direction + centre;
         
     }
 }

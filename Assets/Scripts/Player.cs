@@ -20,6 +20,8 @@ public class Player : MonoBehaviour
     public bool isGrounded;
     public bool isSprinting;
 
+    public byte orientation;
+
     public Transform blockHighlight;
     public Transform blockPlacer;
     public float checkIncrement = 0.1f;
@@ -69,6 +71,19 @@ public class Player : MonoBehaviour
             PlaceCursorBlocks();
 
         }
+
+        // Update orientation
+        Vector3 xzDirection = transform.forward;
+        xzDirection.y = 0;
+        if(Vector3.Angle(xzDirection, Vector3.forward) <= 45)
+            orientation = 0;
+        else if(Vector3.Angle(xzDirection, Vector3.right) <= 45)
+            orientation = 5;
+        else if(Vector3.Angle(xzDirection, Vector3.back) <= 45)
+            orientation = 1;
+        else
+            orientation = 4;
+
     }
 
     void FixedUpdate() {
@@ -134,14 +149,12 @@ public class Player : MonoBehaviour
 
             // delete block
             if(Input.GetMouseButtonDown(0))
-                //world.GetChunkFromPosition(blockHighlight.position).EditVoxel(blockHighlight.position, 0);
                 world.modifications.Add(new ReplaceVoxelMod(blockHighlight.position, 0));
 
             // place block
             if(Input.GetMouseButtonDown(1))
                 if(toolbar.hasItem) {
-                    //world.GetChunkFromPosition(blockPlacer.position).EditVoxel(blockPlacer.position, selectedBlockIndex);
-                    world.modifications.Add(new AddVoxelMod(blockPlacer.position, toolbar.selectedBlockIndex));
+                    world.modifications.Add(new AddVoxelMod(blockPlacer.position, toolbar.selectedBlockIndex, this.orientation));
                     toolbar.slots[toolbar.slotIndex].itemSlot.Take(1);
                 }
 

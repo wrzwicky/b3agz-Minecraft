@@ -4,6 +4,9 @@ public class VoxelState {
     
     /// <summary>block type id</summary>
     public byte id;
+    /// <summary>0..5; corresponds to faceChecks</summary>
+    public byte orientation;
+
     /// <summary>How much light is falling on this block</summary>
     [System.NonSerialized]
     private byte _light;
@@ -12,6 +15,7 @@ public class VoxelState {
     public VoxelState(byte id) {
 
         this.id = id;
+        this.orientation = 1; //front
         this.light = 0;
 
     }

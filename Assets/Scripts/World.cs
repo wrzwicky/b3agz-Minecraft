@@ -12,6 +12,7 @@ public class World : MonoBehaviour {
     public BiomeAttributes[] biomes;
 
     public Transform player;
+    public Player playerScript;
     public Vector3 spawnPosition;
 
     // texture for chunks
@@ -80,6 +81,8 @@ public class World : MonoBehaviour {
         appPath = Application.persistentDataPath;
 
         clouds.style = settings.clouds;
+
+        playerScript = player.GetComponent<Player>();
 
     }
 
@@ -686,6 +689,7 @@ public abstract class VoxelMod {
 public class AddVoxelMod : VoxelMod {
 
     public byte id;
+    public byte orientation;
 
     public AddVoxelMod() {
 
@@ -702,13 +706,22 @@ public class AddVoxelMod : VoxelMod {
 
         position = _pos;
         id = _id;
+        this.orientation = 1; //front
+
+    }
+
+    public AddVoxelMod(Vector3 _pos, byte _id, byte orientation) {
+
+        position = _pos;
+        id = _id;
+        this.orientation = orientation;
 
     }
 
     public override bool Apply(Chunk chunk) {
 
         if(chunk.GetVoxelFromGlobalPosition(position).id == 0) {
-            chunk.SetVoxelFromGlobalPosition(position, id);
+            chunk.SetVoxelFromGlobalPosition(position, id, orientation);
             return true;
         }
         else
@@ -725,6 +738,7 @@ public class AddVoxelMod : VoxelMod {
 public class ReplaceVoxelMod : VoxelMod {
 
     public byte id;
+    public byte orientation;
 
     public ReplaceVoxelMod() {
 
@@ -741,6 +755,19 @@ public class ReplaceVoxelMod : VoxelMod {
 
         position = pos;
         this.id = id;
+        this.orientation = 1; //front
+
+    }
+
+    /// <summary>
+    /// pos = 3D world position of block
+    /// id = block ID
+    /// </summary>
+    public ReplaceVoxelMod(Vector3 pos, byte id, byte orientation) {
+
+        position = pos;
+        this.id = id;
+        this.orientation = orientation;
 
     }
 
@@ -749,7 +776,7 @@ public class ReplaceVoxelMod : VoxelMod {
         var old = chunk.GetVoxelFromGlobalPosition(position).id;
         
         if(old != this.id) {
-            chunk.SetVoxelFromGlobalPosition(position, id);
+            chunk.SetVoxelFromGlobalPosition(position, id, orientation);
             return true;
         }
         else
