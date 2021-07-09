@@ -18,6 +18,7 @@ public class World : MonoBehaviour {
     // texture for chunks
     public Material material;
     public Material transparentMaterial;
+    public Material waterMaterial;
     public BlockType[] blockTypes;
 
     public GameObject debugScreen;
@@ -512,8 +513,14 @@ Debug.Log("UpdateChunks_one -      end");
             voxelValue = biome.surfaceBlock;
         else if(yPos < terrainHeight && yPos > terrainHeight - 4)
             voxelValue = biome.subSurfaceBlock;
-        else if(yPos > terrainHeight)
-            return 0; //air
+        else if(yPos > terrainHeight) {
+
+            if(yPos < 51)  //TODO don't hardcode sea level!
+                return 15; //water
+            else
+                return 0; //air
+
+        }
         else
             voxelValue = 2; //stone
 
@@ -633,6 +640,8 @@ public class BlockType {
     public bool isSolid;
     [Tooltip("true if block is transparent, translucent, or otherwise does not fully block view of neighbor blocks")]
     public bool seeThrough;
+    [Tooltip("true if block water")]
+    public bool isWater;
     [Tooltip("amount of light stopped by block: 0 = none (invisible); 15 = all (opaque)")]
     [Range(0, 15)]
     public byte opacity;

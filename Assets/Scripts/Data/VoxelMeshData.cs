@@ -15,7 +15,7 @@ public class VoxelMeshData : ScriptableObject {
 public class FaceMeshData {
 
     public string direction;  //name; for inspector
-    private VertData[] vertices;
+    public VertData[] vertices;
     public int[] triangles;
 
     public int VertCount {

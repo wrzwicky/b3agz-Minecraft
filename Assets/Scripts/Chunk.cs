@@ -13,7 +13,7 @@ public class Chunk
     static readonly float[] ROT_ANGLE = {180f, 0f, 0f, 0f, 90f, 270f};
     
     // rotate faceChecks index by .orientation
-    // new-p = PROT[orientation, old-p]
+    // new-p = ROT_FACECHECKS[orientation, old-p]
     int[,] ROT_FACECHECKS = {
         //N,S, T,B, W,E
         {1,0, 2,3, 5,4},   // orientation == 0-back
@@ -23,30 +23,7 @@ public class Chunk
         {4,5, 2,3, 1,0},   // orientation == 4-west
         {5,4, 2,3, 0,1},   // orientation == 5-east
     };
-/*
-            case 0:
-                dirText = "North";
-                break;
-            case 1:
-                dirText = "South";
-                break;
-            case 4:
-                dirText = "West";
-                break;
-            case 5:
-                dirText = "East";
-                break;
-            default:
-                dirText = world.playerScript.orientation.ToString();
-                break;
 
-        new Vector3Int(0,0,-1), //back
-        new Vector3Int(0,0, 1), //front
-        new Vector3Int(0, 1,0), //top
-        new Vector3Int(0,-1,0), //bottom
-        new Vector3Int(-1,0,0), //left
-        new Vector3Int( 1,0,0), //right
-*/
     public ChunkCoord coord;
 
     GameObject chunkObject;
@@ -55,7 +32,8 @@ public class Chunk
     List<Vector3> vertices = new List<Vector3>();
     List<int> triangles = new List<int>();
     List<int> transparentTriangles = new List<int>();
-    Material[] materials = new Material[2];
+    List<int> waterTriangles = new List<int>();
+    Material[] materials = new Material[3];
     List<Vector2> uvs = new List<Vector2>();
     List<Color> colors = new List<Color>();
     List<Vector3> normals = new List<Vector3>();
@@ -111,6 +89,7 @@ public class Chunk
 
             materials[0] = world.material;
             materials[1] = world.transparentMaterial;
+            materials[2] = world.waterMaterial;
             meshRenderer.materials = materials;
 
         }
@@ -300,6 +279,7 @@ public class Chunk
         vertices.Clear();
         triangles.Clear();
         transparentTriangles.Clear();
+        waterTriangles.Clear();
         uvs.Clear();
         colors.Clear();
         normals.Clear();
@@ -348,7 +328,7 @@ public class Chunk
             VoxelState neighbor = GetState(pos + VoxelData.faceChecks[rotp]);
 
             // suppress faces covered by other voxels
-            if(neighbor.blockType.seeThrough) {
+            if(neighbor.blockType.seeThrough && !(voxel.blockType.isWater && chunkData.map[ipos.x, ipos.y+1, ipos.z].blockType.isWater)) {
 
                 FaceMeshData face = voxel.blockType.meshData.faces[p];
 
@@ -365,15 +345,22 @@ public class Chunk
                     vertices.Add(pos + vertData.GetRotatedPos(new Vector3(0, rot, 0)));
                     normals.Add(VoxelData.faceChecks[p]);
                     colors.Add(new Color(0,0,0, lightLevel));
-                    AddTextureVert(voxel.blockType.GetTextureID(p), vertData.uv);
+                    if(voxel.blockType.isWater)
+                        uvs.Add(voxel.blockType.meshData.faces[p].vertices[i].uv);
+                    else
+                        AddTextureVert(voxel.blockType.GetTextureID(p), vertData.uv);
 
                 }
 
                 for(int i=0; i < face.triangles.Length; i++) {
 
-                    (!voxel.blockType.seeThrough ? triangles : transparentTriangles).Add(
-                        firstVert + face.triangles[i]
-                    );
+                    List<int> dest = triangles;
+                    if(voxel.blockType.isWater)
+                        dest = waterTriangles;
+                    else if (voxel.blockType.seeThrough)
+                        dest = transparentTriangles;
+
+                    dest.Add(firstVert + face.triangles[i]);
 
                 }
             }
@@ -405,6 +392,7 @@ public class Chunk
             Vector3[] vertsA = null;
             int[] trisA = null;
             int[] transA = null;
+            int[] waterA = null;
             Vector2[] uvsA = null;
             Color[] colorsA = null;
             Vector3[] normalsA = null;
@@ -414,6 +402,8 @@ public class Chunk
                 vertsA = vertices.ToArray();
                 trisA = triangles.ToArray();
                 transA = transparentTriangles.ToArray();
+                waterA = waterTriangles.ToArray();
+
                 uvsA = uvs.ToArray();
                 colorsA = colors.ToArray();
                 normalsA = normals.ToArray();
@@ -425,9 +415,10 @@ public class Chunk
             Mesh mesh = new Mesh();
             mesh.vertices = vertsA;
             
-            mesh.subMeshCount = 2;
+            mesh.subMeshCount = 3;
             mesh.SetTriangles(trisA, 0);  //opaque material
             mesh.SetTriangles(transA, 1);  //transparent material
+            mesh.SetTriangles(waterA, 2);  //water material
 
             mesh.uv = uvsA;
 

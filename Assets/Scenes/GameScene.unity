@@ -2231,12 +2231,14 @@ MonoBehaviour:
   spawnPosition: {x: 0, y: 0, z: 0}
   material: {fileID: 2100000, guid: 0cb19855740cc7c46b30dc9c54b5c178, type: 2}
   transparentMaterial: {fileID: 2100000, guid: 0523b1d240fe3ea45aa02faea05f7f12, type: 2}
+  waterMaterial: {fileID: 2100000, guid: 357108c31b13a054397c5c7aa098ced0, type: 2}
   blockTypes:
   - blockName: Air
     icon: {fileID: 0}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 0
     seeThrough: 1
+    isWater: 0
     opacity: 0
     backFaceTexture: 0
     frontFaceTexture: 0
@@ -2249,6 +2251,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 9
     frontFaceTexture: 9
@@ -2261,6 +2264,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 0
     frontFaceTexture: 0
@@ -2273,6 +2277,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 2
     frontFaceTexture: 2
@@ -2285,6 +2290,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 10
     frontFaceTexture: 10
@@ -2297,6 +2303,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 1
     frontFaceTexture: 1
@@ -2309,6 +2316,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 5
     frontFaceTexture: 5
@@ -2321,6 +2329,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 4
     frontFaceTexture: 4
@@ -2333,6 +2342,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 11
     frontFaceTexture: 11
@@ -2345,6 +2355,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: ec3c03649abb52d40b5b0542e9738825, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 8
     frontFaceTexture: 8
@@ -2357,6 +2368,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 1
+    isWater: 0
     opacity: 2
     backFaceTexture: 3
     frontFaceTexture: 3
@@ -2369,6 +2381,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 1
+    isWater: 0
     opacity: 5
     backFaceTexture: 16
     frontFaceTexture: 16
@@ -2381,6 +2394,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 18
     frontFaceTexture: 18
@@ -2393,6 +2407,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 18
     frontFaceTexture: 18
@@ -2405,6 +2420,7 @@ MonoBehaviour:
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
     isSolid: 1
     seeThrough: 0
+    isWater: 0
     opacity: 15
     backFaceTexture: 13
     frontFaceTexture: 12
@@ -2412,6 +2428,19 @@ MonoBehaviour:
     bottomFaceTexture: 15
     leftFaceTexture: 13
     rightFaceTexture: 13
+  - blockName: Water
+    icon: {fileID: 1159639000735656762, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
+    meshData: {fileID: 11400000, guid: 2fb1773d3c4a23b41ae90fd1aaaaa55f, type: 2}
+    isSolid: 1
+    seeThrough: 1
+    isWater: 1
+    opacity: 7
+    backFaceTexture: 0
+    frontFaceTexture: 0
+    topFaceTexture: 0
+    bottomFaceTexture: 0
+    leftFaceTexture: 0
+    rightFaceTexture: 0
   debugScreen: {fileID: 153910518}
   creativeInventoryWindow: {fileID: 1085744341}
   cursorSlot: {fileID: 1942917803}

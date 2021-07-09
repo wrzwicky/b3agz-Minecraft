@@ -5,6 +5,12 @@ using UnityEngine.UI;
 
 public class DebugScreen : MonoBehaviour
 {
+    static readonly string[] ORIENTATION = {
+        "North", "South", 
+        "Down", "Up",
+        "West", "East"
+    };
+
     World world;
     Text text;
 
@@ -45,26 +51,7 @@ public class DebugScreen : MonoBehaviour
                 + Mathf.FloorToInt(world.player.transform.position.z);
         debugText += "\nChunk: " + world.GetChunkCoordFromPosition(world.player.transform.position);
 
-        string dirText = "";
-        switch(world.playerScript.orientation) {
-            case 0:
-                dirText = "North";
-                break;
-            case 1:
-                dirText = "South";
-                break;
-            case 4:
-                dirText = "West";
-                break;
-            case 5:
-                dirText = "East";
-                break;
-            default:
-                dirText = world.playerScript.orientation.ToString();
-                break;
-        }
-
-        debugText += "\n\nDirection Facing: " + dirText;
+        debugText += "\n\nDirection Facing: " + ORIENTATION[world.playerScript.orientation];
 
         text.text = debugText;
         
