@@ -31,7 +31,7 @@ public class VoxelState {
     }
 
     public float lightAsFloat {
-        get { return (float)light * VoxelData.unitOfLight; }
+        get { return (float)light * GameData.unitOfLight; }
     }
 
     // Get amount of light this block is casting to neighbors.

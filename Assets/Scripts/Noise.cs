@@ -3,13 +3,13 @@ public static class Noise {
 
     public static float Get2DPerlin(Vector2 position, float offset, float scale) {
 
-        float px = position.x + offset + VoxelData.seed + 0.1f;
-        float py = position.y + offset + VoxelData.seed + 0.1f;
+        float px = position.x + offset + GameData.seed + 0.1f;
+        float py = position.y + offset + GameData.seed + 0.1f;
 
         // Unity's perlin generator is unhappy at int boundaries
         return Mathf.PerlinNoise(
-            px / VoxelData.ChunkWidth * scale,
-            py / VoxelData.ChunkWidth * scale);
+            px / GameData.ChunkWidth * scale,
+            py / GameData.ChunkWidth * scale);
 
     }
 
@@ -17,9 +17,9 @@ public static class Noise {
 
         // from "Easy 3D Perlin Noise" by Carlpilot v=Aga0TBJkchM
 
-        float x = (position.x + offset + VoxelData.seed + 0.1f) * scale;
-        float y = (position.y + offset + VoxelData.seed + 0.1f) * scale;
-        float z = (position.z + offset + VoxelData.seed + 0.1f) * scale;
+        float x = (position.x + offset + GameData.seed + 0.1f) * scale;
+        float y = (position.y + offset + GameData.seed + 0.1f) * scale;
+        float z = (position.z + offset + GameData.seed + 0.1f) * scale;
 
         // Get all three permutations of noise for X, Y, and Z
         float XY = Mathf.PerlinNoise(x, y);

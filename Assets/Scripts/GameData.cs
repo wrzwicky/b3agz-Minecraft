@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class VoxelData
+public static class GameData
 {
 
     public static readonly int ChunkWidth = 16;
@@ -15,7 +15,11 @@ public static class VoxelData
 //    public static float lightFalloff = 0.08f; now just 1 unitOfLight
     
     // world seed
-    public static int seed = Mathf.Abs(Utils.SuperRandom()) / VoxelData.WorldSizeInChunks;
+//    public static int seed = Mathf.Abs(Utils.SuperRandom()) / GameData.WorldSizeInChunks;
+    public static int seed = 67890;
+
+    // how often to update world voxels
+    public static float tickLength = 1f;
 
     public static int WorldCentre {
         get { return (WorldSizeInChunks * ChunkWidth) / 2; }

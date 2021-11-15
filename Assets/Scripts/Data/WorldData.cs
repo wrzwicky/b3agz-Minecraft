@@ -26,7 +26,7 @@ public class WorldData {
 
     public WorldData() {
 
-        seed = VoxelData.seed;
+        seed = GameData.seed;
 
     }
 
@@ -102,9 +102,9 @@ public class WorldData {
     // return true if pos is within range defined in VoxelData to have voxels
     bool IsVoxelInWorld(Vector3 pos) {
 
-        return (pos.x >= 0 && pos.x < VoxelData.WorldSizeInVoxels
-            && pos.y >= 0 && pos.y < VoxelData.ChunkHeight
-            && pos.z >= 0 && pos.z < VoxelData.WorldSizeInVoxels);
+        return (pos.x >= 0 && pos.x < GameData.WorldSizeInVoxels
+            && pos.y >= 0 && pos.y < GameData.ChunkHeight
+            && pos.z >= 0 && pos.z < GameData.WorldSizeInVoxels);
 
     }
 
@@ -115,12 +115,12 @@ public class WorldData {
             return;
 
         // get chunk index
-        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
-        int z = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
+        int x = Mathf.FloorToInt(pos.x / GameData.ChunkWidth);
+        int z = Mathf.FloorToInt(pos.x / GameData.ChunkWidth);
         
         // get origin of chunk
-        x *= VoxelData.ChunkWidth;
-        z *= VoxelData.ChunkWidth;
+        x *= GameData.ChunkWidth;
+        z *= GameData.ChunkWidth;
 
         // fetch/create
         Vector2Int coord = new Vector2Int(x, z);
@@ -143,12 +143,12 @@ public class WorldData {
             return null;
 
         // get chunk index
-        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
-        int z = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
+        int x = Mathf.FloorToInt(pos.x / GameData.ChunkWidth);
+        int z = Mathf.FloorToInt(pos.x / GameData.ChunkWidth);
         
         // get origin of chunk
-        x *= VoxelData.ChunkWidth;
-        z *= VoxelData.ChunkWidth;
+        x *= GameData.ChunkWidth;
+        z *= GameData.ChunkWidth;
 
         // fetch/create
         Vector2Int coord = new Vector2Int(x, z);

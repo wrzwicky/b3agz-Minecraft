@@ -79,8 +79,7 @@ public class Jobs<T> : IEnumerable<T> {
         }
     }
 
-    public bool Contains(T c)
-    {
+    public bool Contains(T c) {
         return things.Contains(c);
     }
 
@@ -89,24 +88,29 @@ public class Jobs<T> : IEnumerable<T> {
     ///
     public T Any() {
 
-        //lock(things) {
-        if(Monitor.TryEnter(things)) { try {
+        if(Monitor.TryEnter(things)) {
+            try {
 
-            HashSet<T>.Enumerator e = things.GetEnumerator();
-            if(e.MoveNext()) {
+                HashSet<T>.Enumerator e = things.GetEnumerator();
+                if(e.MoveNext()) {
 
-                T job = e.Current;
-                e.Dispose();
-                things.Remove(job);
-                return job;
+                    T job = e.Current;
+                    e.Dispose();
+                    things.Remove(job);
+                    return job;
+
+                }
+                else
+                    return default(T);
 
             }
-            else
-                return default(T);
-
-        //}
-        } finally { Monitor.Exit(things); } } else { return default(T); }
-
+            finally {
+                Monitor.Exit(things);
+            }
+        }
+        else {
+            return default(T);
+        }
     }
 
     // use a lambda, like for Sort:

@@ -37,10 +37,10 @@ public class Clouds : MonoBehaviour
     void Start() {
 
         cloudTexWidth = cloudPattern.width;
-        cloudTileSize = VoxelData.ChunkWidth;
+        cloudTileSize = GameData.ChunkWidth;
         offset = new Vector3Int(-cloudTexWidth / 2, 0, -cloudTexWidth / 2);
 
-        transform.position = new Vector3(VoxelData.WorldCentre, cloudHeight, VoxelData.WorldCentre);
+        transform.position = new Vector3(GameData.WorldCentre, cloudHeight, GameData.WorldCentre);
 
         LoadCloudData();
         CreateClouds();
@@ -184,17 +184,17 @@ public class Clouds : MonoBehaviour
 
                     for(int p=0; p < 6; p++) {
 
-                        if(!CheckCloudData(new Vector3Int(xVal, 0, zVal) + VoxelData.faceChecks[p])) {
+                        if(!CheckCloudData(new Vector3Int(xVal, 0, zVal) + GameData.faceChecks[p])) {
 
                             // add 4 verts for this face
                             for(int i = 0; i < 4; i++) {
 
                                 Vector3 vert = new Vector3Int(xi, 0, zi);
-                                vert += VoxelData.voxelVerts[VoxelData.voxelTris[p, i]];
+                                vert += GameData.voxelVerts[GameData.voxelTris[p, i]];
                                 vert.y *= cloudDepth;
                                 vertices.Add(vert);
 
-                                normals.Add(VoxelData.faceChecks[p]);
+                                normals.Add(GameData.faceChecks[p]);
 
                             }
 

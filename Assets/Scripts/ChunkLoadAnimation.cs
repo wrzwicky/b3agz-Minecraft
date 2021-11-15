@@ -15,7 +15,7 @@ public class ChunkLoadAnimation : MonoBehaviour
         waitTimer = Random.Range(0f, 1f);
         timer = 0;
         targetPos = transform.position;
-        transform.position = new Vector3(transform.position.x, -VoxelData.ChunkHeight, transform.position.z);
+        transform.position = new Vector3(transform.position.x, -GameData.ChunkHeight, transform.position.z);
     }
 
     // Update is called once per frame

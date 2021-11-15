@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.IO;
 using UnityEngine;
+using Unity.Profiling;
 
 
 public class World : MonoBehaviour {
+
+    static readonly ProfilerMarker s_profileUpdate = new ProfilerMarker("World.Update");
+    static readonly ProfilerMarker s_profUpdateOne = new ProfilerMarker("World.UpdateChunks_one");
 
     public Settings settings;
 
@@ -38,7 +42,7 @@ public class World : MonoBehaviour {
 
     public Clouds clouds;
 
-    Chunk[,] chunks = new Chunk[VoxelData.WorldSizeInChunks, VoxelData.WorldSizeInChunks];
+    Chunk[,] chunks = new Chunk[GameData.WorldSizeInChunks, GameData.WorldSizeInChunks];
 
     // - - - - - New WorldData system - - - - - //
 
@@ -89,21 +93,21 @@ public class World : MonoBehaviour {
 
     private void Start() {
 
-        Shader.SetGlobalFloat("minGlobalLightLevel", VoxelData.minLightLevel);
-        Shader.SetGlobalFloat("maxGlobalLightLevel", VoxelData.maxLightLevel);
+        Shader.SetGlobalFloat("minGlobalLightLevel", GameData.minLightLevel);
+        Shader.SetGlobalFloat("maxGlobalLightLevel", GameData.maxLightLevel);
         SetGlobalLightValue();
 
         spawnPosition = new Vector3(
-            VoxelData.WorldCentre,
-            VoxelData.ChunkHeight - 2,  //TODO crashes if y>chunkheight
-            VoxelData.WorldCentre);
+            GameData.WorldCentre,
+            GameData.ChunkHeight - 2,  //TODO crashes if y>chunkheight
+            GameData.WorldCentre);
         // player.position = spawnPosition;
 
         // worldData is magically not null here, dunno what's going on
         string path = Path.Combine(appPath, "saves", worldData.worldName);
-        worldData = SaveSystem.LoadWorld(path, VoxelData.seed);
+        worldData = SaveSystem.LoadWorld(path, GameData.seed);
         if(worldData == null) {
-            Debug.Log("Generating new world using seed " + VoxelData.seed);
+            Debug.Log("Generating new world using seed " + GameData.seed);
             worldData = new WorldData();
         }
         else
@@ -116,9 +120,13 @@ public class World : MonoBehaviour {
             chunkUpdateThread.Start();
         }
 
+        // Start block behaviors clock
+        StartCoroutine(Tick());
+
     }
 
     void Update() {
+        using(s_profileUpdate.Auto()) {
 
         ChunkCoord curchunk = GetChunkCoordFromPosition(player.position);
 
@@ -130,9 +138,6 @@ public class World : MonoBehaviour {
             clouds.UpdateClouds(player.position);
 
         }
-
-        // apply any outstanding mods
-        //ApplyModifications();
 
         if(settings.enableThreading) {
             // thread is already running!
@@ -154,6 +159,31 @@ public class World : MonoBehaviour {
 
             string path = appPath + "/saves/" + worldData.worldName + "/";
             SaveSystem.SaveWorld(worldData, path);
+
+        }
+
+    }}
+
+    // reproduce b3agz' activeChunks list
+    public IEnumerable<ChunkCoord> activeChunks() {
+        foreach(Chunk c in chunks) {
+            if(c != null && c.isActive) {
+                yield return c.coord;
+            }
+        }
+    }
+
+    IEnumerator Tick() {
+
+        Debug.Log("Tick");
+
+        while(true) {
+
+            foreach(ChunkCoord c in activeChunks()) {
+                chunks[c.x, c.z].TickUpdate();
+            }
+
+            yield return new WaitForSeconds(GameData.tickLength);
 
         }
     }
@@ -215,11 +245,11 @@ public class World : MonoBehaviour {
 
                 if(IsChunkInWorld(coord)) {
 
-                    Vector2 playerRef = new Vector2(center.x * VoxelData.ChunkWidth, center.z * VoxelData.ChunkWidth); //player.position.x, player.position.z);
-                    Vector2 chunkRef = new Vector2(x * VoxelData.ChunkWidth, z * VoxelData.ChunkWidth);
+                    Vector2 playerRef = new Vector2(center.x * GameData.ChunkWidth, center.z * GameData.ChunkWidth); //player.position.x, player.position.z);
+                    Vector2 chunkRef = new Vector2(x * GameData.ChunkWidth, z * GameData.ChunkWidth);
                     float dist = (playerRef - chunkRef).magnitude;
 
-                    if(dist <= settings.viewDistance * VoxelData.ChunkWidth)
+                    if(dist <= settings.viewDistance * GameData.ChunkWidth)
                         showChunks.Add(coord);
                     else if(chunks[x,z] != null)
                         hideChunks.Add(coord);
@@ -279,10 +309,10 @@ public class World : MonoBehaviour {
                 if(IsChunkInWorld(coord)) {
 
                     Vector2 playerRef = new Vector2(player.position.x, player.position.z);
-                    Vector2 chunkRef = new Vector2(x * VoxelData.ChunkWidth, z * VoxelData.ChunkWidth);
+                    Vector2 chunkRef = new Vector2(x * GameData.ChunkWidth, z * GameData.ChunkWidth);
                     float dist = (playerRef - chunkRef).magnitude;
 
-                    if(dist <= settings.viewDistance * VoxelData.ChunkWidth) {
+                    if(dist <= settings.viewDistance * GameData.ChunkWidth) {
 
                         // build/update as needed
                         if(chunks[x,z] == null) {
@@ -399,26 +429,28 @@ public class World : MonoBehaviour {
     }
 
     bool UpdateChunks_one() {
-Debug.Log("UpdateChunks_one - start");
+        using(s_profUpdateOne.Auto()) {
+
+//Debug.Log("UpdateChunks_one - start");
         // apply any outstanding mods
         ApplyModifications();
 
         ChunkCoord coord = chunksToUpdate.Any();
         if(coord == null) {
-Debug.Log("UpdateChunks_one -      empty");
+//Debug.Log("UpdateChunks_one -      empty");
             return false;
         }
 
-        Debug.Log("Update "+coord);
+//Debug.Log("Update "+coord);
         Chunk c = chunks[coord.x, coord.z];
 
         // generate this chunk
         c.UpdateChunk();
 
-Debug.Log("UpdateChunks_one -      end");
+//Debug.Log("UpdateChunks_one -      end");
         return true;
 
-    }
+    }}
 
     void DrawChunks_now() {
 
@@ -439,19 +471,19 @@ Debug.Log("UpdateChunks_one -      end");
         }
     }
 
-    bool IsChunkInWorld(ChunkCoord coord) {
+    public bool IsChunkInWorld(ChunkCoord coord) {
 
-        return (coord.x >= 0 && coord.x < VoxelData.WorldSizeInChunks
-            && coord.z >= 0 && coord.z < VoxelData.WorldSizeInChunks);
+        return (coord.x >= 0 && coord.x < GameData.WorldSizeInChunks
+            && coord.z >= 0 && coord.z < GameData.WorldSizeInChunks);
 
     }
 
-    // return true if pos is within range defined in VoxelData to have voxels
-    bool IsVoxelInWorld(Vector3 pos) {
+    // return true if pos is within range defined in GameData to have voxels
+    public bool IsVoxelInWorld(Vector3 pos) {
 
-        return (pos.x >= 0 && pos.x < VoxelData.WorldSizeInVoxels
-            && pos.y >= 0 && pos.y < VoxelData.ChunkHeight
-            && pos.z >= 0 && pos.z < VoxelData.WorldSizeInVoxels);
+        return (pos.x >= 0 && pos.x < GameData.WorldSizeInVoxels
+            && pos.y >= 0 && pos.y < GameData.ChunkHeight
+            && pos.z >= 0 && pos.z < GameData.WorldSizeInVoxels);
 
     }
 
@@ -565,16 +597,17 @@ Debug.Log("UpdateChunks_one -      end");
     // return world location of origin of chunk which contains position 'pos'
     public ChunkCoord GetChunkCoordFromPosition(Vector3 pos) {
 
-        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
-        int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkWidth);
+        int x = Mathf.FloorToInt(pos.x / GameData.ChunkWidth);
+        int z = Mathf.FloorToInt(pos.z / GameData.ChunkWidth);
         return new ChunkCoord(x,z);
 
     }
 
+    /// get chunk containing world coord
     public Chunk GetChunkFromPosition(Vector3 pos) {
 
-        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
-        int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkWidth);
+        int x = Mathf.FloorToInt(pos.x / GameData.ChunkWidth);
+        int z = Mathf.FloorToInt(pos.z / GameData.ChunkWidth);
         return chunks[x,z];
 
     }
@@ -599,6 +632,7 @@ Debug.Log("UpdateChunks_one -      end");
 
     }
 
+    /// get voxel at world coords
     public VoxelState GetState(Vector3 pos) {
 
         // air outside world
@@ -634,6 +668,10 @@ public class BlockType {
     public string blockName;
     public Sprite icon;
     public VoxelMeshData meshData;
+
+    [Header("Behavior")]
+    [Tooltip("true if block can have simulation behavior")]
+    public bool isActive;
 
     [Header ("Visibility")]
     [Tooltip("true if there is anything at all in this block; false if fully empty (air/space)")]

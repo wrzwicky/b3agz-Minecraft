@@ -8,10 +8,10 @@ public static class Lighting {
     // (re)propogate natural light for a whole chunk
     public static void RecalculateNaturalLight(ChunkData chunkData) {
 
-        for(int x=0; x<VoxelData.ChunkWidth; x++) {
-            for(int z=0; z<VoxelData.ChunkWidth; z++) {
+        for(int x=0; x<GameData.ChunkWidth; x++) {
+            for(int z=0; z<GameData.ChunkWidth; z++) {
 
-                CastNaturalLight(chunkData, x, z, VoxelData.ChunkHeight-1);
+                CastNaturalLight(chunkData, x, z, GameData.ChunkHeight-1);
 
             }
         }
@@ -20,9 +20,9 @@ public static class Lighting {
     // propogate natural light straight down from the given x,y starting from startY
     public static void CastNaturalLight(ChunkData chunkData, int x, int z, int startY) {
 
-        if(startY > VoxelData.ChunkHeight - 1) {
+        if(startY > GameData.ChunkHeight - 1) {
 
-            startY = VoxelData.ChunkHeight - 1;
+            startY = GameData.ChunkHeight - 1;
             Debug.LogWarning("Attempted to cast natrual light form above world.");
 
         }

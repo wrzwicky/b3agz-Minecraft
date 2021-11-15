@@ -14,7 +14,7 @@ public class ChunkData {
 
     // hidden; is too much data for inspector
     [HideInInspector]
-    public VoxelState[,,] map = new VoxelState[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
+    public VoxelState[,,] map = new VoxelState[GameData.ChunkWidth, GameData.ChunkHeight, GameData.ChunkWidth];
 
 
     public ChunkData(Vector2Int pos) {
@@ -38,9 +38,9 @@ public class ChunkData {
     /// create new voxels for chunk
     public void Populate() {
 
-        for(int y=0; y<VoxelData.ChunkHeight; y++) {
-            for(int x=0; x<VoxelData.ChunkWidth; x++) {
-                for(int z=0; z<VoxelData.ChunkWidth; z++) {
+        for(int y=0; y<GameData.ChunkHeight; y++) {
+            for(int x=0; x<GameData.ChunkWidth; x++) {
+                for(int z=0; z<GameData.ChunkWidth; z++) {
 
                     map[x,y,z] = new VoxelState( World.Instance.CreateVoxel(new Vector3(x + position.x, y, z + position.y), false));
 

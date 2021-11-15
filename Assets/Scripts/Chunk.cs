@@ -2,12 +2,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using Unity.Profiling;
 
 //TODO threading: Activate() calls ThreadController.Call(UpdateChunk), which pushes isActive to game thread
 
 public class Chunk
 {
+    static readonly ProfilerMarker s_profUpdateChunk = new ProfilerMarker("Chunk.UpdateChunk");
+    static readonly ProfilerMarker s_profRelight = new ProfilerMarker("Chunk.RecalculateLight");
+    static readonly ProfilerMarker s_profResetPoly = new ProfilerMarker("Chunk.ResetPolys");
+    static readonly ProfilerMarker s_profApplyMods = new ProfilerMarker("Chunk.ApplyModifications");
 
     // convert .orientation to y-rotation angle
     static readonly float[] ROT_ANGLE = {180f, 0f, 0f, 0f, 90f, 270f};
@@ -54,6 +58,10 @@ public class Chunk
 
     ChunkData chunkData;
 
+    // - - - - - - Block Behaviours  - - - - - //
+
+    HashSet<TrackedVoxel> activeVoxels = new HashSet<TrackedVoxel>();
+
     // - - - - - - - - - - - - - - - - - - - - //
 
 
@@ -61,7 +69,7 @@ public class Chunk
     public Chunk(ChunkCoord _coord, World _world) {
 
         coord = _coord;
-        origin = new Vector3(coord.x * VoxelData.ChunkWidth, 0f, coord.z * VoxelData.ChunkWidth);
+        origin = new Vector3(coord.x * GameData.ChunkWidth, 0f, coord.z * GameData.ChunkWidth);
         world = _world;
         _isActive = false;
 
@@ -70,6 +78,17 @@ public class Chunk
         chunkData = World.Instance.worldData.RequestChunk(new Vector2Int((int)origin.x, (int)origin.z), true);
         isVoxelMapPopulated = true;
 
+        for(int y=0; y<GameData.ChunkHeight; y++) {
+            for(int x=0; x<GameData.ChunkWidth; x++) {
+                for(int z=0; z<GameData.ChunkWidth; z++) {
+        
+                    VoxelState voxel = chunkData.map[x,y,z];
+                    if(voxel.blockType.isActive)
+                        AddActiveVoxel(new TrackedVoxel(this, new Vector3(x,y,z)));
+
+                }
+            }
+        }
     }
 
     // init Unity objects. must be called on game thread.
@@ -108,6 +127,14 @@ public class Chunk
 
     }
 
+    public void AddActiveVoxel(TrackedVoxel vox) {
+        activeVoxels.Add(vox);
+    }
+
+    public void RemoveActiveVoxel(Vector3 pos) {
+        activeVoxels.RemoveWhere(tv => tv.pos == pos);
+    }
+
     /// create new voxels for chunk
     void PopulateVoxelMap() {
 
@@ -122,6 +149,7 @@ public class Chunk
 
     /// <summary>Update voxelMap with registered mods</summary>
     public int ApplyModifications() {
+        using(s_profApplyMods.Auto()) {
 
         int qty = 0;  // keep actual count cuz why not
 
@@ -139,12 +167,29 @@ public class Chunk
 
         return qty;
 
+    }}
+
+    public void TickUpdate() {
+
+        if(activeVoxels.Count == 0)
+            return;
+
+        Debug.Log(coord + " currently has " + activeVoxels.Count + " active blocks.");
+        // clone list so we can modify while iterating
+        foreach(TrackedVoxel tv in new List<TrackedVoxel>(activeVoxels)) {
+            if(!BlockBehaviour.Active(tv.pos))
+                activeVoxels.Remove(tv);
+            else
+                BlockBehaviour.Behave(tv);
+        }
+
     }
 
     /// <summary>
     /// Update this chunks voxels as needed.
     /// </summary>
     public void UpdateChunk() {
+        using(s_profUpdateChunk.Auto()) {
 
 //        PopulateVoxelMap(); -- done by RequestChunk
 
@@ -162,14 +207,14 @@ public class Chunk
             world.chunksToDraw.Add(this);
 
         }
-    }
+    }}
 
     // return false if x,y,z is outside chuck local coords (0..ChunkWidth/Height)
     bool IsVoxelInChunk(Vector3Int v) {
 
-        if(v.x<0 || v.x>VoxelData.ChunkWidth-1
-            || v.y<0 || v.y>VoxelData.ChunkHeight-1
-            || v.z<0 || v.z>VoxelData.ChunkWidth-1)
+        if(v.x<0 || v.x>GameData.ChunkWidth-1
+            || v.y<0 || v.y>GameData.ChunkHeight-1
+            || v.z<0 || v.z>GameData.ChunkWidth-1)
             // no voxels outside this chunk
             return false;
         else
@@ -180,9 +225,9 @@ public class Chunk
     // return false if x,y,z is outside chuck local coords (0..ChunkWidth/Height)
     bool IsVoxelInChunk(int x, int y, int z) {
 
-        if(x<0 || x>VoxelData.ChunkWidth-1
-            || y<0 || y>VoxelData.ChunkHeight-1
-            || z<0 || z>VoxelData.ChunkWidth-1)
+        if(x<0 || x>GameData.ChunkWidth-1
+            || y<0 || y>GameData.ChunkHeight-1
+            || z<0 || z>GameData.ChunkWidth-1)
             // no voxels outside this chunk
             return false;
         else
@@ -230,9 +275,7 @@ public class Chunk
     // pos is worldwide, but must be within this chunk
     public void SetVoxelFromGlobalPosition(Vector3 pos, byte id) {
 
-        Vector3Int v = Vector3Int.FloorToInt(pos - origin);
-        chunkData.map[v.x, v.y, v.z].id = id;
-        World.Instance.worldData.AddModified(chunkData);
+        SetVoxelFromGlobalPosition(pos, id, 0);
 
     }
 
@@ -244,6 +287,11 @@ public class Chunk
         chunkData.map[v.x, v.y, v.z].orientation = orientation;
         World.Instance.worldData.AddModified(chunkData);
 
+        if(world.blockTypes[id].isActive && BlockBehaviour.Active(pos)) {
+            TrackedVoxel tv = new TrackedVoxel(pos);
+            AddActiveVoxel(tv);
+        }
+
     }
 
     // pos is worldwide
@@ -253,8 +301,6 @@ public class Chunk
         chunkData.map[v.x, v.y, v.z].id = newID;
         World.Instance.worldData.AddModified(chunkData);
 
-        //UpdateChunkBackground();
-        //UpdateChunk_thread();
         world.chunksToUpdate.Add(coord);
         UpdateSurroundingVoxels(v);
 
@@ -264,8 +310,14 @@ public class Chunk
 
         for (int p=0; p<6; p++) {
         
-            Vector3 checkVoxel = v + VoxelData.faceChecks[p];
+            Vector3 checkVoxel = v + GameData.faceChecks[p];
 
+            // make neighbors active (not recursive)
+            TrackedVoxel tn = new TrackedVoxel(origin + checkVoxel);
+            if(tn.voxel != null && BlockBehaviour.Active(tn.pos))
+                AddActiveVoxel(tn);
+
+            // if at chunk border, update neighbor chunk
             if(!IsVoxelInChunk(Vector3Int.FloorToInt(checkVoxel))) {
 
                 world.chunksToUpdate.Add(world.GetChunkCoordFromPosition(checkVoxel + origin));
@@ -288,6 +340,7 @@ public class Chunk
 
     /// <summary>Generate fresh vertices and tris from current voxels</summary>
     public void ResetPolys() {
+        using(s_profResetPoly.Auto()) {
 
         lock(vertices) {
 
@@ -295,9 +348,9 @@ public class Chunk
 //            CalculateLight_wrz();
 //            //CalculateLight_b3agz();
 
-            for(int y=0; y<VoxelData.ChunkHeight; y++) {
-                for(int x=0; x<VoxelData.ChunkWidth; x++) {
-                    for(int z=0; z<VoxelData.ChunkWidth; z++) {
+            for(int y=0; y<GameData.ChunkHeight; y++) {
+                for(int x=0; x<GameData.ChunkWidth; x++) {
+                    for(int z=0; z<GameData.ChunkWidth; z++) {
 
                         UpdateMeshData(new Vector3(x,y,z));
 
@@ -309,7 +362,7 @@ public class Chunk
 
         }
 
-    }
+    }}
 
     // generate vertices, triangles, and colors for one voxel
     void UpdateMeshData(Vector3 pos) {
@@ -325,7 +378,7 @@ public class Chunk
 
             int rotp = ROT_FACECHECKS[voxel.orientation, p];
 
-            VoxelState neighbor = GetState(pos + VoxelData.faceChecks[rotp]);
+            VoxelState neighbor = GetState(pos + GameData.faceChecks[rotp]);
 
             // suppress faces covered by other voxels
             if(neighbor.blockType.seeThrough && !(voxel.blockType.isWater && chunkData.map[ipos.x, ipos.y+1, ipos.z].blockType.isWater)) {
@@ -343,7 +396,7 @@ public class Chunk
                     VertData vertData = face.GetVertData(i);
 
                     vertices.Add(pos + vertData.GetRotatedPos(new Vector3(0, rot, 0)));
-                    normals.Add(VoxelData.faceChecks[p]);
+                    normals.Add(GameData.faceChecks[p]);
                     colors.Add(new Color(0,0,0, lightLevel));
                     if(voxel.blockType.isWater)
                         uvs.Add(voxel.blockType.meshData.faces[p].vertices[i].uv);
@@ -369,16 +422,16 @@ public class Chunk
 
     void AddTextureVert(int textureID, Vector2 uv) {
 
-        float y = textureID / VoxelData.TextureAtlasSizeInBlocks;
-        float x = textureID - (y * VoxelData.TextureAtlasSizeInBlocks);
+        float y = textureID / GameData.TextureAtlasSizeInBlocks;
+        float x = textureID - (y * GameData.TextureAtlasSizeInBlocks);
 
-        x *= VoxelData.NormalizedBlockTextureSize;
-        y *= VoxelData.NormalizedBlockTextureSize;
+        x *= GameData.NormalizedBlockTextureSize;
+        y *= GameData.NormalizedBlockTextureSize;
 
-        y = 1f - y - VoxelData.NormalizedBlockTextureSize;
+        y = 1f - y - GameData.NormalizedBlockTextureSize;
 
-        x += VoxelData.NormalizedBlockTextureSize * uv.x;
-        y += VoxelData.NormalizedBlockTextureSize * uv.y;
+        x += GameData.NormalizedBlockTextureSize * uv.x;
+        y += GameData.NormalizedBlockTextureSize * uv.y;
 
         uvs.Add(new Vector2(x,y));
 
@@ -447,9 +500,9 @@ public class Chunk
 
     public void PurgeLight() {
 
-        for(int x=0; x<VoxelData.ChunkWidth; x++) {
-            for(int y=0; y<VoxelData.ChunkHeight; y++) {
-                for(int z=0; z<VoxelData.ChunkWidth; z++) {
+        for(int x=0; x<GameData.ChunkWidth; x++) {
+            for(int y=0; y<GameData.ChunkHeight; y++) {
+                for(int z=0; z<GameData.ChunkWidth; z++) {
 
                     chunkData.map[x,y,z].light = 0;
 
@@ -459,6 +512,7 @@ public class Chunk
     }
 
     public void RecalculateLight() {
+        using(s_profRelight.Auto()) {
 
         PurgeLight();
         Lighting.RecalculateNaturalLight(chunkData);
@@ -471,9 +525,9 @@ public class Chunk
 
             changed = false;
             
-            for(int x=0; x<VoxelData.ChunkWidth; x++) {
-                for(int y=0; y<VoxelData.ChunkHeight; y++) {
-                    for(int z=0; z<VoxelData.ChunkWidth; z++) {
+            for(int x=0; x<GameData.ChunkWidth; x++) {
+                for(int y=0; y<GameData.ChunkHeight; y++) {
+                    for(int z=0; z<GameData.ChunkWidth; z++) {
 
                         VoxelState voxel = chunkData.map[x, y, z];
 
@@ -484,9 +538,9 @@ public class Chunk
                             int light = voxel.light;
 
                             // find brightest neighbor
-                            for(int p = 0; p < VoxelData.faceChecks.Length; p++) {
+                            for(int p = 0; p < GameData.faceChecks.Length; p++) {
 
-                                Vector3Int index = new Vector3Int(x,y,z) + VoxelData.faceChecks[p];
+                                Vector3Int index = new Vector3Int(x,y,z) + GameData.faceChecks[p];
                                 VoxelState probe;
 
                                 if(!IsVoxelInChunk(index))
@@ -521,7 +575,7 @@ public class Chunk
             safety--;
 
         } while(changed && safety > 0);
-    }
+    }}
 
 
 
@@ -553,8 +607,8 @@ public class ChunkCoord {
     // pos = coords of voxel; we become coord of enclosing chunk
     public ChunkCoord(Vector3 pos) {
 
-        x = Mathf.FloorToInt(pos.x) / VoxelData.ChunkWidth;
-        z = Mathf.FloorToInt(pos.z) / VoxelData.ChunkWidth;
+        x = Mathf.FloorToInt(pos.x) / GameData.ChunkWidth;
+        z = Mathf.FloorToInt(pos.z) / GameData.ChunkWidth;
 
     }
 
@@ -588,4 +642,53 @@ public class ChunkCoord {
         return "(" + x + ", " + z + ")";
 
     }
+}
+
+
+/// replacement for beagz' complex VoxelState class
+public class TrackedVoxel {
+    public Chunk chunk;
+    public VoxelState voxel;
+    public Vector3 pos;
+
+
+    public TrackedVoxel(Vector3 pos) { 
+        this.pos = pos;
+        this.chunk = World.Instance.GetChunkFromPosition(pos);
+        this.voxel = this.chunk.GetVoxelFromGlobalPosition(pos);
+    }
+
+    public TrackedVoxel(Chunk chunk, Vector3 relPos) {
+        this.pos = chunk.origin + relPos;
+        this.chunk = chunk;
+        this.voxel = this.chunk.GetVoxelFromGlobalPosition(this.pos);
+    }
+
+    // public TrackedVoxel back { get {
+    //     var p = pos + GameData.faceChecks[0];
+    //     return World.Instance.IsVoxelInWorld(p) ? new TrackedVoxel(p) : null;
+    // }}
+
+    public VoxelState back  { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[0]); }}
+    public VoxelState front { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[1]); }}
+    public VoxelState above { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[2]); }}
+    public VoxelState below { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[3]); }}
+    public VoxelState left  { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[4]); }}
+    public VoxelState right { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[5]); }}
+
+    public VoxelState[] neighbors { get {
+        return new VoxelState[6] {
+            back, front, above, below, left, right
+        };
+    }}
+
+    // public TrackedVoxel[] neighbors { get {
+    //     TrackedVoxel[] n = new TrackedVoxel[6];
+    //     for(int p=0; p<6; p++) {
+    //         var np = pos + GameData.faceChecks[p];
+    //         if(World.Instance.IsVoxelInWorld(np))
+    //             n[p] = new TrackedVoxel(np);
+    //     }
+    //     return n;
+    // }
 }
