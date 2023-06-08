@@ -191,8 +191,6 @@ public class Chunk
     public void UpdateChunk() {
         using(s_profUpdateChunk.Auto()) {
 
-//        PopulateVoxelMap(); -- done by RequestChunk
-
         bool modded = ApplyModifications() > 0;
 
         // need to (re)gen mesh?
@@ -345,8 +343,6 @@ public class Chunk
         lock(vertices) {
 
             ClearMeshData();
-//            CalculateLight_wrz();
-//            //CalculateLight_b3agz();
 
             for(int y=0; y<GameData.ChunkHeight; y++) {
                 for(int x=0; x<GameData.ChunkWidth; x++) {

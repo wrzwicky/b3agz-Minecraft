@@ -145,8 +145,8 @@ public class World : MonoBehaviour {
         else {
 
             //UpdateChunks_now();
-            //UpdateChunks_one();
-            UpdateChunks_later();
+            UpdateChunks_one();
+            //UpdateChunks_later();
 
         }
 

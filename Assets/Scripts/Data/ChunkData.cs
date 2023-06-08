@@ -3,11 +3,12 @@ using UnityEngine;
 
 /// <summary>
 /// Just the data for a chunk; no Unity code.
-/// 'this is the class that gets saveed'
+/// 'this is the class that gets saved'
 /// </summary>
 [System.Serializable]
 public class ChunkData {
 
+    // Location of this chunk in world
     // Vector2Int is not serializable :(
     int x;
     int y;

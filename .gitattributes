@@ -1,0 +1,24 @@
+# Declare unity data files that will always have LF line endings on checkout.
+# https://stackoverflow.com/a/66365066
+#    and
+# 'djcsdy/Unity with source control.md' https://gist.github.com/djcsdy/1f9cc264dc56c16bf2d9d228a1db78a5
+
+*.anim text eol=lf
+*.asmdef text eol=lf
+*.asset text eol=lf
+*.controller text eol=lf
+*.guiskin text eol=lf
+*.json text eol=lf
+*.lighting text eol=lf
+*.mask text eol=lf
+*.mat text eol=lf
+*.meta text eol=lf
+*.mixer text eol=lf
+*.overrideController text eol=lf
+*.prefab text eol=lf
+*.preset text eol=lf
+*.renderTexture text eol=lf
+*.spriteatlas text eol=lf
+*.unity text eol=lf
+*.wlt text eol=lf
+*.xml text eol=lf
