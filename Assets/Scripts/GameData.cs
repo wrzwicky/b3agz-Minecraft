@@ -18,7 +18,8 @@ public static class GameData
 //    public static int seed = Mathf.Abs(Utils.SuperRandom()) / GameData.WorldSizeInChunks;
     public static int seed = 67890;
 
-    // how often to update world voxels
+
+    /// seconds; how often to run block behaviors
     public static float tickLength = 1f;
 
     public static int WorldCentre {

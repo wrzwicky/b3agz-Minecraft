@@ -43,14 +43,13 @@ public class World : MonoBehaviour {
     public Clouds clouds;
 
     Chunk[,] chunks = new Chunk[GameData.WorldSizeInChunks, GameData.WorldSizeInChunks];
+    public object chunkListThreadLock = new object();
 
     // - - - - - New WorldData system - - - - - //
 
     private static World _instance;
     public static World Instance { get { return _instance; } }
 
-    public object chunkListThreadLock = new object();
-    
     public string appPath;
     public WorldData worldData;
 
@@ -125,6 +124,11 @@ public class World : MonoBehaviour {
 
     }
 
+//TODO thread World.Update
+// cuz World.Update -> CheckViewDistance_circle -> new Chunk -> worldData.RequestChunk -> LoadChunk
+//   -> loads or generates on render thread!
+// stalls game startup for 32 sec!
+
     void Update() {
         using(s_profileUpdate.Auto()) {
 
@@ -175,9 +179,9 @@ public class World : MonoBehaviour {
 
     IEnumerator Tick() {
 
-        Debug.Log("Tick");
-
         while(true) {
+
+            //Debug.Log("Tick");
 
             foreach(ChunkCoord c in activeChunks()) {
                 chunks[c.x, c.z].TickUpdate();
@@ -340,7 +344,7 @@ public class World : MonoBehaviour {
 
     // move global voxel mods into appropriate chunks
     // flush invalid mods
-    // return set of Chunk objects that have received mods
+    // return true if any mods were processed
     bool ApplyModifications() {
 
         bool hadMods = false;
@@ -441,13 +445,13 @@ public class World : MonoBehaviour {
             return false;
         }
 
-//Debug.Log("Update "+coord);
+Debug.Log("UpdateChunks_one - start "+coord);
         Chunk c = chunks[coord.x, coord.z];
 
         // generate this chunk
         c.UpdateChunk();
 
-//Debug.Log("UpdateChunks_one -      end");
+Debug.Log("UpdateChunks_one -   end "+coord);
         return true;
 
     }}
@@ -487,113 +491,6 @@ public class World : MonoBehaviour {
 
     }
 
-    // generate new voxel for pos in world
-    // fake=true means do min work to find if pos is solid or not. do not queue mods!
-    // was GetVoxel
-    public byte CreateVoxel(Vector3 pos, bool fake) {
-
-        int yPos = Mathf.FloorToInt(pos.y);
-
-        // -- IMMUTABLE PASS -- //
-
-        // outside world -> air
-        if(!IsVoxelInWorld(pos))
-            return 0;
-
-        // bottom of chunk -> bedrock
-        if(pos.y <= 0)
-            return 1; //bedrock
-
-        // -- BIOME SELECTION PASS -- //
-
-        int solidGroundHeight = 42;
-        float sumOfHeight = 0;
-        int count = 0;
-        float strongestWeight = 0f;
-        int strongestIndex = 0;
-
-        for(int i=0; i < biomes.Length; i++) {
-
-            // choose 'strongest' biome for this voxel
-            float weight = Noise.Get2DPerlin(new Vector2(pos.x, pos.z), biomes[i].offset, biomes[i].scale);
-            if(weight > strongestWeight) {
-
-                strongestWeight = weight;
-                strongestIndex = i;
-
-            }
-
-            // height is average of all biomes, for smoothness
-            float height = biomes[i].terrainHeight * Noise.Get2DPerlin(new Vector2(pos.x, pos.z), 0, biomes[i].terrainScale) * weight;
-            if(height > 0) {
-                sumOfHeight += height;
-                count++;
-            }
-
-        }
-
-        BiomeAttributes biome = biomes[strongestIndex];
-
-        int terrainHeight = Mathf.FloorToInt(sumOfHeight/count + solidGroundHeight);
-
-
-        // -- BASIC TERRAIN PASS -- //
-
-        byte voxelValue = 0;
-
-        if(yPos == terrainHeight)
-            voxelValue = biome.surfaceBlock;
-        else if(yPos < terrainHeight && yPos > terrainHeight - 4)
-            voxelValue = biome.subSurfaceBlock;
-        else if(yPos > terrainHeight) {
-
-            if(yPos < 51)  //TODO don't hardcode sea level!
-                return 15; //water
-            else
-                return 0; //air
-
-        }
-        else
-            voxelValue = 2; //stone
-
-        if(fake)
-            return voxelValue;
-
-        // -- SECOND PASS -- //
-
-        if(voxelValue == 2) {
-            foreach(Lode lode in biome.lodes) {
-                if(yPos > lode.minHeight && yPos < lode.maxHeight) {
-                    if(Noise.Get3DPerlin(pos, lode.noiseOffset, lode.scale, lode.threshold))
-
-                        voxelValue = lode.blockID;
-
-                }
-            }
-        }
-
-        // -- MAJOR FLORA PASS -- //
-
-        // trees can only sprout on surface
-        if(yPos == terrainHeight && biome.placeMajorFlora) {
-
-            // make patches that can be forest-y
-            if(Noise.Get2DPerlin(new Vector2(pos.x, pos.z), 123, biome.majorFloraZoneScale) > biome.majorFloraZoneTheshold) {
-
-                // within patches, make trees
-                voxelValue = biome.zoneSurfaceBlock;
-                if(Noise.Get2DPerlin(new Vector2(pos.x, pos.z), 123, biome.majorFloraPlacementScale) > biome.majorFloraPlacementThreshold) {
-
-                    Structure.GenerateMajorFlora(biome.majorFloraIndex, pos, modifications, biome.minHeight, biome.maxHeight, biome.headSize);
-
-                }
-            }
-        }
-
-        return voxelValue;
-
-    }
-
     // return world location of origin of chunk which contains position 'pos'
     public ChunkCoord GetChunkCoordFromPosition(Vector3 pos) {
 
@@ -612,7 +509,7 @@ public class World : MonoBehaviour {
 
     }
 
-    // pos is worldwide
+    /// get voxel type at world coords
     // returns blockType, or BlockType.NOTHING if pos is outside world
     // or generates voxel if not generated yet
     public BlockType Voxel(Vector3 pos) {
@@ -627,8 +524,10 @@ public class World : MonoBehaviour {
         if(chunks[thisChunk.x, thisChunk.z] != null && chunks[thisChunk.x,thisChunk.z].isVoxelMapPopulated)
             return blockTypes[chunks[thisChunk.x, thisChunk.z].GetVoxelFromGlobalPosition(pos).id];
 
-        // generate (but dont save) if not
-        return blockTypes[CreateVoxel(pos, true)];
+        // // generate (but dont save) if not
+        // return blockTypes[CreateVoxel(pos, true)];
+        // pretend its solid til generation is done
+        return blockTypes[BlockBehaviour.idBEDROCK];
 
     }
 
@@ -650,7 +549,36 @@ public class World : MonoBehaviour {
 
     }
 
+    /// mark for simulation the one block at given world coord
+    void ActivatePos(Vector3 pos) {
+
+        TrackedVoxel tv = new TrackedVoxel(pos);
+        if(tv.voxel != null && BlockBehaviour.IsActive(tv.pos)) {
+
+            tv.chunk.AddActiveVoxel(tv);
+            chunksToUpdate.Add(tv.chunk.coord);
+
+        }
+    }
+    
+    /// mark for simulation the given block and all 6 neighbors
+    /// pos is world coords
+    public void ActivateBlocks(Vector3 pos) {
+
+        ActivatePos(pos);
+
+        // make neighbors active (not recursive)
+        for (int p=0; p<6; p++) {
+
+            Vector3 checkVoxel = pos + GameData.faceChecks[p];
+
+            ActivatePos(checkVoxel);
+
+        }
+    }
 }
+
+
 
 [System.Serializable]
 public class BlockType {
@@ -833,11 +761,69 @@ public class ReplaceVoxelMod : VoxelMod {
 }
 
 
+/// <summary>
+/// is a request to replace a specific voxel at a position in world,
+/// after appropriate chunk is generated
+/// then trigger block behavior
+/// </summary>
+public class ReplaceVoxelAndSim : VoxelMod {
+
+    public byte id;
+    public byte orientation;
+
+    public ReplaceVoxelAndSim() {
+
+        position = new Vector3();
+        id = 0;
+
+    }
+
+    /// <summary>
+    /// pos = 3D world position of block
+    /// id = block ID
+    /// </summary>
+    public ReplaceVoxelAndSim(Vector3 pos, byte id) {
+
+        position = pos;
+        this.id = id;
+        this.orientation = 1; //front
+
+    }
+
+    /// <summary>
+    /// pos = 3D world position of block
+    /// id = block ID
+    /// </summary>
+    public ReplaceVoxelAndSim(Vector3 pos, byte id, byte orientation) {
+
+        position = pos;
+        this.id = id;
+        this.orientation = orientation;
+
+    }
+
+    public override bool Apply(Chunk chunk) {
+
+        var old = chunk.GetVoxelFromGlobalPosition(position).id;
+        
+        if(old != this.id) {
+            chunk.SetVoxelFromGlobalPosition(position, id, orientation);
+            World.Instance.ActivateBlocks(position);
+            return true;
+        }
+        else
+            return false;
+
+    }
+}
+
+
 
 [System.Serializable]
 public class Settings {
 
     [Header("Game Data")]
+    /// settings file version
     public string version = "20x1.0.0r3";
 
     [Header("Performance")]
@@ -865,3 +851,7 @@ public class Settings {
 
     }
 }
+
+
+//TODO fix rendering of chunk perimeter faces
+//TODO fix chunk gen threading

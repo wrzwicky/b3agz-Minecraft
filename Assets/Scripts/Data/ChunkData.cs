@@ -39,11 +39,17 @@ public class ChunkData {
     /// create new voxels for chunk
     public void Populate() {
 
+        Vector3 origin3d = new Vector3(x,0,y);
+
         for(int y=0; y<GameData.ChunkHeight; y++) {
             for(int x=0; x<GameData.ChunkWidth; x++) {
                 for(int z=0; z<GameData.ChunkWidth; z++) {
 
-                    map[x,y,z] = new VoxelState( World.Instance.CreateVoxel(new Vector3(x + position.x, y, z + position.y), false));
+                    //map[x,y,z] = new VoxelState( World.Instance.CreateVoxel(new Vector3(x + position.x, y, z + position.y), false));
+                    map[x,y,z] = new VoxelState( 
+                        Structure.CreateVoxel(
+                            World.Instance, new Vector3(x, y, z) + origin3d, 
+                            World.Instance.modifications));
 
                 }
             }

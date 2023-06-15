@@ -2,18 +2,37 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
+/**
+ * <summary>Very simple block simulation. Kills smothered grass, spreads planted grass.</summary>
+ */
 public static class BlockBehaviour {
 
+    // gotta hardcode thses cuz we got a lotta hardcoded behavior in the code
     public const byte idNOTHING = 0;
+    public const byte idBEDROCK = 1;
+    public const byte idSTONE = 2;
     public const byte idGRASS = 3;
     public const byte idDIRT = 5;
+    public const byte idWOOD = 6;
+    public const byte idPLANK = 7;
+    public const byte idBRICK = 8;
+    public const byte idCOBBLE = 9;
+    public const byte idGLASS = 10;
+    public const byte idLEAF = 11;
+    public const byte idCACTUS = 12;
+    public const byte idCACTOP = 13;
+    public const byte idFURNACE = 14;
+    public const byte idWATER = 15;
 
     // return true if block is 'active'
-    //   voxel has behavior and *can* do something
-    public static bool Active(Vector3 pos) {
+    // == block type is marked active, and block might need an update
+    // (i.e. Behave() needs to be called)
+    public static bool IsActive(Vector3 pos) {
 
         VoxelState voxel = World.Instance.GetState(pos);
+
+        if(!voxel.blockType.isActive)
+            return false;
 
         switch(voxel.id) {
 
@@ -35,6 +54,9 @@ public static class BlockBehaviour {
                     //Debug.Log("Grass block with potential to spread has been found.");
                     return true;
                 }
+                else if(v2 != null && v2.id != idNOTHING)
+                    // block on top -> grass is smothered
+                    return true;
 
                 break;
             }
@@ -51,16 +73,31 @@ public static class BlockBehaviour {
 
             case idGRASS:
                 if(tv.above != null && tv.above.id != idNOTHING) {
-                    tv.chunk.RemoveActiveVoxel(tv.pos);
-                    //tv.chunk.SetVoxelFromGlobalPosition(tv.pos, idDIRT);
                     World.Instance.modifications.Add(new ReplaceVoxelMod(tv.pos, idDIRT));
                     return;
                 }
 
-                // List(VoxelState)
-                // if(tv.back != null && tv.back.id != idDIRT)
+                if((tv.back != null && tv.back.id == idDIRT) ||
+                    (tv.front != null && tv.front.id == idDIRT) ||
+                    (tv.left != null && tv.left.id == idDIRT) ||
+                    (tv.right != null && tv.right.id == idDIRT)) {
 
+                        Debug.Log(" -doing grass");
+                        //World.Instance.modifications.Add(new ReplaceVoxelMod(tv.pos, idNOTHING));
+                        if(tv.back.id == idDIRT)
+                            World.Instance.modifications.Add(new ReplaceVoxelAndSim(
+                                tv.pos + GameData.faceChecks[0], idGRASS));
+                        if(tv.front.id == idDIRT)
+                            World.Instance.modifications.Add(new ReplaceVoxelAndSim(
+                                tv.pos + GameData.faceChecks[1], idGRASS));
+                        if(tv.left.id == idDIRT)
+                            World.Instance.modifications.Add(new ReplaceVoxelAndSim(
+                                tv.pos + GameData.faceChecks[4], idGRASS));
+                        if(tv.right.id == idDIRT)
+                            World.Instance.modifications.Add(new ReplaceVoxelAndSim(
+                                tv.pos + GameData.faceChecks[5], idGRASS));
 
+                }
 
                 break;
 

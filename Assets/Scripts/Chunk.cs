@@ -78,17 +78,20 @@ public class Chunk
         chunkData = World.Instance.worldData.RequestChunk(new Vector2Int((int)origin.x, (int)origin.z), true);
         isVoxelMapPopulated = true;
 
-        for(int y=0; y<GameData.ChunkHeight; y++) {
-            for(int x=0; x<GameData.ChunkWidth; x++) {
-                for(int z=0; z<GameData.ChunkWidth; z++) {
+        // Activate blocks when chunk is loaded/created
+        // NO DONT - scanning block should be on thread
+        // for(int y=0; y<GameData.ChunkHeight; y++) {
+        //     for(int x=0; x<GameData.ChunkWidth; x++) {
+        //         for(int z=0; z<GameData.ChunkWidth; z++) {
         
-                    VoxelState voxel = chunkData.map[x,y,z];
-                    if(voxel.blockType.isActive)
-                        AddActiveVoxel(new TrackedVoxel(this, new Vector3(x,y,z)));
+        //             VoxelState voxel = chunkData.map[x,y,z];
+        //             if(voxel.blockType.isActive)
+        //                 AddActiveVoxel(new TrackedVoxel(this, new Vector3(x,y,z)));
 
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
+
     }
 
     // init Unity objects. must be called on game thread.
@@ -175,12 +178,10 @@ public class Chunk
             return;
 
         Debug.Log(coord + " currently has " + activeVoxels.Count + " active blocks.");
-        // clone list so we can modify while iterating
+        // clone list so we can modify original while iterating
         foreach(TrackedVoxel tv in new List<TrackedVoxel>(activeVoxels)) {
-            if(!BlockBehaviour.Active(tv.pos))
-                activeVoxels.Remove(tv);
-            else
-                BlockBehaviour.Behave(tv);
+            activeVoxels.Remove(tv);
+            BlockBehaviour.Behave(tv);
         }
 
     }
@@ -202,6 +203,7 @@ public class Chunk
 
             ResetPolys();
             //meshFilter.mesh = CreateMesh();
+            //-> chunksToDraw will call CreateMesh on seperate loop
             world.chunksToDraw.Add(this);
 
         }
@@ -249,20 +251,23 @@ public class Chunk
 
     }
 
-    /// <summary>pos is relative to chunk origin</summary>
+    /// <summary>
+    /// Return voxel at given relative position.
+    /// <c>pos</c> is relative to chunk origin
+    /// </summary>
     VoxelState GetState(Vector3 pos) {
         
         // mathematically more correct than just (int)
         Vector3Int v = Vector3Int.FloorToInt(pos);
 
-        if (!IsVoxelInChunk(v))
+        if (IsVoxelInChunk(v))
+            return chunkData.map[v.x, v.y, v.z];
+        else
             return world.GetState(origin + pos);
-
-        return chunkData.map[v.x, v.y, v.z];
 
     }
 
-    // pos is worldwide, but must be within this chunk
+    // pos is worldwide, but must be within this chunk else crash
     public VoxelState GetVoxelFromGlobalPosition(Vector3 pos) {
         
         Vector3Int v = Vector3Int.FloorToInt(pos - origin);
@@ -270,14 +275,15 @@ public class Chunk
 
     }
 
-    // pos is worldwide, but must be within this chunk
+    // pos is worldwide, but must be within this chunk else crash
     public void SetVoxelFromGlobalPosition(Vector3 pos, byte id) {
 
         SetVoxelFromGlobalPosition(pos, id, 0);
 
     }
 
-    // pos is worldwide, but must be within this chunk
+    /// update voxel in database, trigger updates as needed
+    // pos is worldwide, but must be within this chunk else crash
     public void SetVoxelFromGlobalPosition(Vector3 pos, byte id, byte orientation) {
 
         Vector3Int v = Vector3Int.FloorToInt(pos - origin);
@@ -285,43 +291,6 @@ public class Chunk
         chunkData.map[v.x, v.y, v.z].orientation = orientation;
         World.Instance.worldData.AddModified(chunkData);
 
-        if(world.blockTypes[id].isActive && BlockBehaviour.Active(pos)) {
-            TrackedVoxel tv = new TrackedVoxel(pos);
-            AddActiveVoxel(tv);
-        }
-
-    }
-
-    // pos is worldwide
-    public void EditVoxel(Vector3 pos, byte newID) {
-
-        Vector3Int v = Vector3Int.FloorToInt(pos - origin);
-        chunkData.map[v.x, v.y, v.z].id = newID;
-        World.Instance.worldData.AddModified(chunkData);
-
-        world.chunksToUpdate.Add(coord);
-        UpdateSurroundingVoxels(v);
-
-    }
-
-    void UpdateSurroundingVoxels(Vector3Int v) {
-
-        for (int p=0; p<6; p++) {
-        
-            Vector3 checkVoxel = v + GameData.faceChecks[p];
-
-            // make neighbors active (not recursive)
-            TrackedVoxel tn = new TrackedVoxel(origin + checkVoxel);
-            if(tn.voxel != null && BlockBehaviour.Active(tn.pos))
-                AddActiveVoxel(tn);
-
-            // if at chunk border, update neighbor chunk
-            if(!IsVoxelInChunk(Vector3Int.FloorToInt(checkVoxel))) {
-
-                world.chunksToUpdate.Add(world.GetChunkCoordFromPosition(checkVoxel + origin));
-
-            }
-        }
     }
 
     void ClearMeshData() {
@@ -376,8 +345,13 @@ public class Chunk
 
             VoxelState neighbor = GetState(pos + GameData.faceChecks[rotp]);
 
-            // suppress faces covered by other voxels
-            if(neighbor.blockType.seeThrough && !(voxel.blockType.isWater && chunkData.map[ipos.x, ipos.y+1, ipos.z].blockType.isWater)) {
+            bool suppress =
+                // suppress faces covered by other voxels
+                !neighbor.blockType.seeThrough ||
+                // suppress voxel if is water an is covered by water
+                (voxel.blockType.isWater && chunkData.map[ipos.x, ipos.y+1, ipos.z].blockType.isWater);
+
+            if(!suppress) {
 
                 FaceMeshData face = voxel.blockType.meshData.faces[p];
 
@@ -651,7 +625,9 @@ public class TrackedVoxel {
     public TrackedVoxel(Vector3 pos) { 
         this.pos = pos;
         this.chunk = World.Instance.GetChunkFromPosition(pos);
-        this.voxel = this.chunk.GetVoxelFromGlobalPosition(pos);
+        // chunk loaded yet?
+        if(this.chunk != null)
+            this.voxel = this.chunk.GetVoxelFromGlobalPosition(pos);
     }
 
     public TrackedVoxel(Chunk chunk, Vector3 relPos) {
@@ -660,17 +636,12 @@ public class TrackedVoxel {
         this.voxel = this.chunk.GetVoxelFromGlobalPosition(this.pos);
     }
 
-    // public TrackedVoxel back { get {
-    //     var p = pos + GameData.faceChecks[0];
-    //     return World.Instance.IsVoxelInWorld(p) ? new TrackedVoxel(p) : null;
-    // }}
-
-    public VoxelState back  { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[0]); }}
-    public VoxelState front { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[1]); }}
-    public VoxelState above { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[2]); }}
-    public VoxelState below { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[3]); }}
-    public VoxelState left  { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[4]); }}
-    public VoxelState right { get { return chunk.GetVoxelFromGlobalPosition(pos + GameData.faceChecks[5]); }}
+    public VoxelState back  { get { return World.Instance.GetState(pos + GameData.faceChecks[0]); }}
+    public VoxelState front { get { return World.Instance.GetState(pos + GameData.faceChecks[1]); }}
+    public VoxelState above { get { return World.Instance.GetState(pos + GameData.faceChecks[2]); }}
+    public VoxelState below { get { return World.Instance.GetState(pos + GameData.faceChecks[3]); }}
+    public VoxelState left  { get { return World.Instance.GetState(pos + GameData.faceChecks[4]); }}
+    public VoxelState right { get { return World.Instance.GetState(pos + GameData.faceChecks[5]); }}
 
     public VoxelState[] neighbors { get {
         return new VoxelState[6] {
@@ -678,13 +649,4 @@ public class TrackedVoxel {
         };
     }}
 
-    // public TrackedVoxel[] neighbors { get {
-    //     TrackedVoxel[] n = new TrackedVoxel[6];
-    //     for(int p=0; p<6; p++) {
-    //         var np = pos + GameData.faceChecks[p];
-    //         if(World.Instance.IsVoxelInWorld(np))
-    //             n[p] = new TrackedVoxel(np);
-    //     }
-    //     return n;
-    // }
 }

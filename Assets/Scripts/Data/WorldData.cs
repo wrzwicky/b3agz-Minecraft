@@ -11,17 +11,21 @@ using UnityEngine;
 [System.Serializable]
 public class WorldData {
 
-    public string worldName = "Prototype";
+    public string worldName = "Brave New World";
     public int seed;
 
+    /// dictionary mapping 2D index to loaded chunk
+    /// Not serialized! Each chunk saves to its own file.
     [System.NonSerialized]
     public Dictionary<Vector2Int, ChunkData> chunks = new Dictionary<Vector2Int, ChunkData>();
 
+    /// used by SaveSystem to know which chunks need to be re-saved
     [System.NonSerialized]
     public Jobs<ChunkData> modifiedChunks = new Jobs<ChunkData>();
 
+    /// where world is being saved
     [System.NonSerialized]
-    public string savePath;  // where world is being saved
+    public string savePath;
 
 
     public WorldData() {

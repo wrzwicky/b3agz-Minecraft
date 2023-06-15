@@ -147,19 +147,31 @@ public class Player : MonoBehaviour
 
         if(blockHighlight.gameObject.activeSelf) {
 
+//TODO ensure modification runs before activated blocks, or else overhaul code so mods can call ActivateBlocks
+//TODO edit chunk needs to update polys on neighbor chunk - or modify chunk render to always have perimeter polys
+
             // delete block
-            if(Input.GetMouseButtonDown(0))
-                world.modifications.Add(new ReplaceVoxelMod(blockHighlight.position, 0));
+            if(Input.GetMouseButtonDown(0)) {
+
+                world.modifications.Add(
+                    //new ReplaceVoxelMod(blockHighlight.position, 0));
+                    new ReplaceVoxelAndSim(blockHighlight.position, 0));
+
+            }
 
             // place block
-            if(Input.GetMouseButtonDown(1))
+            if(Input.GetMouseButtonDown(1)) {
+
                 if(toolbar.hasItem) {
-                    world.modifications.Add(new AddVoxelMod(blockPlacer.position, toolbar.selectedBlockIndex, this.orientation));
+
                     toolbar.slots[toolbar.slotIndex].itemSlot.Take(1);
+                    world.modifications.Add(
+                        // new AddVoxelMod(blockPlacer.position, toolbar.selectedBlockIndex, this.orientation));
+                    new ReplaceVoxelAndSim(blockPlacer.position, toolbar.selectedBlockIndex, this.orientation));
+
                 }
-
+            }
         }
-
     }   
 
     void PlaceCursorBlocks() {

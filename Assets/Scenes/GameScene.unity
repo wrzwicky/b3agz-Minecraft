@@ -2236,6 +2236,7 @@ MonoBehaviour:
   - blockName: Air
     icon: {fileID: 0}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 0
     seeThrough: 1
     isWater: 0
@@ -2249,6 +2250,7 @@ MonoBehaviour:
   - blockName: Bedrock
     icon: {fileID: -4219558403781695398, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2262,6 +2264,7 @@ MonoBehaviour:
   - blockName: Stone
     icon: {fileID: -1501523072523359806, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2275,6 +2278,7 @@ MonoBehaviour:
   - blockName: Grass
     icon: {fileID: 5392753449730437660, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 1
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2288,6 +2292,7 @@ MonoBehaviour:
   - blockName: Sand
     icon: {fileID: 6181873364862223445, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2301,6 +2306,7 @@ MonoBehaviour:
   - blockName: Dirt
     icon: {fileID: -6943373833598557, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 1
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2314,6 +2320,7 @@ MonoBehaviour:
   - blockName: Wood
     icon: {fileID: -7538633921802359561, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2327,6 +2334,7 @@ MonoBehaviour:
   - blockName: Planks
     icon: {fileID: -9138616440249935319, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2340,6 +2348,7 @@ MonoBehaviour:
   - blockName: Bricks
     icon: {fileID: 448961105294916356, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2353,6 +2362,7 @@ MonoBehaviour:
   - blockName: Cobblestone
     icon: {fileID: 5679390536090785944, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: ec3c03649abb52d40b5b0542e9738825, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2366,6 +2376,7 @@ MonoBehaviour:
   - blockName: Glass
     icon: {fileID: 1159639000735656762, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 1
     isWater: 0
@@ -2379,6 +2390,7 @@ MonoBehaviour:
   - blockName: Leafs
     icon: {fileID: 0}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 1
     isWater: 0
@@ -2392,6 +2404,7 @@ MonoBehaviour:
   - blockName: Cactus
     icon: {fileID: 1159639000735656762, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2405,6 +2418,7 @@ MonoBehaviour:
   - blockName: Cactus Top
     icon: {fileID: 1159639000735656762, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2418,6 +2432,7 @@ MonoBehaviour:
   - blockName: Furnace
     icon: {fileID: 5679390536090785944, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 162b905f377f5af44a7c18fb7e890a67, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 0
     isWater: 0
@@ -2431,6 +2446,7 @@ MonoBehaviour:
   - blockName: Water
     icon: {fileID: 1159639000735656762, guid: c1901f5d5c54a6141b93ddec4503ad10, type: 3}
     meshData: {fileID: 11400000, guid: 2fb1773d3c4a23b41ae90fd1aaaaa55f, type: 2}
+    isActive: 0
     isSolid: 1
     seeThrough: 1
     isWater: 1
@@ -2447,7 +2463,7 @@ MonoBehaviour:
   clouds: {fileID: 1523283876}
   appPath: 
   worldData:
-    worldName: Prototype
+    worldName: Brave New World
     seed: 7971723
   GlobalLightLevel: 0.95
   day: {r: 0.305, g: 0.6186889, b: 1, a: 1}

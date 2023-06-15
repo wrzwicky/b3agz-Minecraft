@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
 
-
 public static class Utils {
     /// <summary>
     /// Generate a random number from the OS generator with extra randomness.
@@ -113,7 +112,8 @@ public class Jobs<T> : IEnumerable<T> {
         }
     }
 
-    // use a lambda, like for Sort:
+    /// Return 'lowest' item as defined by comparer.
+    // 'comparer' is a lambda, like for Sort:
     // list.Sort( (obj1,obj2) => obj1.FirstName.CompareTo(obj2.FirstName) );
     // returns default(T) if list is empty
     public T First(Comparer<T> comparer) {
@@ -137,6 +137,7 @@ public class Jobs<T> : IEnumerable<T> {
         return first;
     }
 
+    /// Return enumerator for copy of contents as of moment of return.
     public IEnumerator<T> GetEnumerator()
     {
         // clone and enumerate so changes don't break it
@@ -145,6 +146,7 @@ public class Jobs<T> : IEnumerable<T> {
         }
     }
 
+    /// Return enumerator for copy of contents as of moment of return.
     IEnumerator IEnumerable.GetEnumerator()
     {
         // clone and enumerate so changes don't break it
